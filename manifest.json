@@ -1,0 +1,11 @@
+{
+    "display_name": "The Chorus",
+    "loading_order": 100,
+    "requires": [],
+    "optional": [],
+    "js": "index.js",
+    "css": "style.css",
+    "author": "sinnerconsort",
+    "version": "0.1.0",
+    "homePage": "https://github.com/sinnerconsort/the-chorus"
+}

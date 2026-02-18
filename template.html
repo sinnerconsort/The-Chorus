@@ -1,0 +1,370 @@
+<!-- ===================================================================
+     THE CHORUS — Main Panel Template
+     Loaded via renderExtensionTemplateAsync('the-chorus', 'template')
+     =================================================================== -->
+
+<!-- FAB (Floating Action Button) -->
+<button id="chorus-fab" title="The Chorus">
+    🂠
+    <span class="chorus-fab__pip"></span>
+</button>
+
+<!-- Panel Shell -->
+<div id="chorus-panel">
+
+    <!-- Header -->
+    <div class="chorus-header">
+        <div class="chorus-header__title">THE CHORUS</div>
+        <div class="chorus-header__actions">
+            <button class="chorus-header__btn" id="chorus-btn-narrator" title="Toggle Narrator">👁</button>
+            <button class="chorus-header__btn" id="chorus-btn-mute" title="Mute Voices">🔇</button>
+            <button class="chorus-header__btn" id="chorus-btn-close" title="Close Panel">✕</button>
+        </div>
+    </div>
+
+    <!-- Tab Bar -->
+    <div class="chorus-tabs">
+        <button class="chorus-tabs__btn active" data-tab="reading">
+            <span class="chorus-tabs__icon">🂠</span>READING
+        </button>
+        <button class="chorus-tabs__btn" data-tab="deck">
+            <span class="chorus-tabs__icon">🃏</span>DECK
+        </button>
+        <button class="chorus-tabs__btn" data-tab="council">
+            <span class="chorus-tabs__icon">⚔</span>COUNCIL
+        </button>
+        <button class="chorus-tabs__btn" data-tab="log">
+            <span class="chorus-tabs__icon">📜</span>LOG
+        </button>
+        <button class="chorus-tabs__btn" data-tab="settings">
+            <span class="chorus-tabs__icon">⚙</span>SETTINGS
+        </button>
+    </div>
+
+    <!-- Content Area -->
+    <div class="chorus-content">
+
+        <!-- ============ READING TAB ============ -->
+        <div class="chorus-page active" id="chorus-page-reading">
+
+            <!-- Spread type selector -->
+            <div class="chorus-spread-pills">
+                <button class="chorus-spread-pill" data-spread="single">SINGLE</button>
+                <button class="chorus-spread-pill active" data-spread="three">THREE</button>
+                <button class="chorus-spread-pill" data-spread="cross">CROSS</button>
+            </div>
+
+            <!-- Spread display area (dynamically populated) -->
+            <div class="chorus-spread chorus-spread--three" id="chorus-spread-area">
+                <!-- Slots injected here by JS -->
+            </div>
+
+            <!-- Draw button -->
+            <button class="chorus-draw-btn" id="chorus-draw-btn">DRAW</button>
+
+            <div class="chorus-divider"></div>
+
+            <!-- Commentary (dynamically populated) -->
+            <div class="chorus-card" id="chorus-commentary-area">
+                <!-- Commentary messages injected here by JS -->
+            </div>
+
+        </div>
+
+        <!-- ============ DECK TAB ============ -->
+        <div class="chorus-page" id="chorus-page-deck">
+
+            <!-- Deck stats -->
+            <div class="chorus-deck-stats" id="chorus-deck-stats">
+                <div class="chorus-deck-stat">
+                    <div class="chorus-deck-stat__val" id="chorus-stat-voices">0</div>
+                    <div class="chorus-deck-stat__label">VOICES</div>
+                </div>
+                <div class="chorus-deck-stat">
+                    <div class="chorus-deck-stat__val" id="chorus-stat-max">7</div>
+                    <div class="chorus-deck-stat__label">MAX</div>
+                </div>
+                <div class="chorus-deck-stat">
+                    <div class="chorus-deck-stat__val" id="chorus-stat-deaths">0</div>
+                    <div class="chorus-deck-stat__label">DEATHS</div>
+                </div>
+            </div>
+
+            <!-- Fan (card collection) -->
+            <div class="chorus-fan" id="chorus-fan">
+                <!-- Fan cards injected here by JS -->
+            </div>
+            <div class="chorus-fan__label" id="chorus-fan-label"></div>
+
+            <!-- Voice detail panels (one per voice, toggled open/closed) -->
+            <div id="chorus-voice-details">
+                <!-- Detail panels injected here by JS -->
+            </div>
+
+        </div>
+
+        <!-- ============ COUNCIL TAB ============ -->
+        <div class="chorus-page" id="chorus-page-council">
+
+            <div class="chorus-sec-title">THE COUNCIL</div>
+            <div class="chorus-sec-sub">Your voices in conversation</div>
+
+            <!-- Active voice pips -->
+            <div class="chorus-council-pips" id="chorus-council-pips">
+                <!-- Pips injected here by JS -->
+            </div>
+
+            <!-- Council messages -->
+            <div class="chorus-card" id="chorus-council-messages">
+                <!-- Council messages injected here by JS -->
+            </div>
+
+            <!-- Council input -->
+            <div class="chorus-council-input">
+                <div class="chorus-council-input__label">YOUR RESPONSE</div>
+                <textarea class="chorus-council-input__field" id="chorus-council-input"
+                    placeholder="Speak to the council..." rows="2"></textarea>
+            </div>
+
+        </div>
+
+        <!-- ============ LOG TAB ============ -->
+        <div class="chorus-page" id="chorus-page-log">
+
+            <div class="chorus-sec-title">CHRONICLE</div>
+            <div class="chorus-sec-sub">History of awakenings &amp; silencings</div>
+
+            <div class="chorus-card" id="chorus-log-entries">
+                <!-- Log entries injected here by JS -->
+            </div>
+
+        </div>
+
+        <!-- ============ SETTINGS TAB ============ -->
+        <div class="chorus-page" id="chorus-page-settings">
+
+            <div class="chorus-sec-title">SETTINGS</div>
+            <div class="chorus-sec-sub">Configure the chorus</div>
+
+            <!-- Voice Engine -->
+            <div class="chorus-card">
+                <div class="chorus-settings-group">
+                    <div class="chorus-settings-group__title">VOICE ENGINE</div>
+
+                    <div class="chorus-setting">
+                        <div>
+                            <div class="chorus-setting__label">CONNECTION</div>
+                            <div class="chorus-setting__desc">API profile for voice generation</div>
+                        </div>
+                        <select class="chorus-select" id="chorus-setting-connection">
+                            <option value="default">Default</option>
+                        </select>
+                    </div>
+
+                    <div class="chorus-setting">
+                        <div>
+                            <div class="chorus-setting__label">NARRATOR</div>
+                            <div class="chorus-setting__desc">Narrator persona style</div>
+                        </div>
+                        <div class="chorus-picker" id="chorus-setting-narrator">
+                            <button class="chorus-picker__opt active" data-value="sardonic">SARDONIC</button>
+                            <button class="chorus-picker__opt" data-value="warm">WARM</button>
+                            <button class="chorus-picker__opt" data-value="clinical">CLINICAL</button>
+                            <button class="chorus-picker__opt" data-value="custom">CUSTOM</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Deck -->
+            <div class="chorus-card">
+                <div class="chorus-settings-group">
+                    <div class="chorus-settings-group__title">DECK</div>
+
+                    <div class="chorus-setting">
+                        <div>
+                            <div class="chorus-setting__label">MAX VOICES</div>
+                            <div class="chorus-setting__desc">Maximum cards in your deck</div>
+                        </div>
+                        <div class="chorus-mini-slider">
+                            <input type="range" id="chorus-setting-max-voices" min="3" max="10" value="7">
+                            <div class="chorus-mini-slider__val" id="chorus-max-voices-val">7</div>
+                        </div>
+                    </div>
+
+                    <div class="chorus-setting">
+                        <div>
+                            <div class="chorus-setting__label">AUTO EGO DEATH</div>
+                            <div class="chorus-setting__desc">Full deck forces sacrifice</div>
+                        </div>
+                        <div class="chorus-toggle on" id="chorus-setting-auto-ego-death">
+                            <div class="chorus-toggle__dot"></div>
+                        </div>
+                    </div>
+
+                    <div class="chorus-setting">
+                        <div>
+                            <div class="chorus-setting__label">BIRTH SENSITIVITY</div>
+                            <div class="chorus-setting__desc">How extreme events must be</div>
+                        </div>
+                        <div class="chorus-mini-slider">
+                            <input type="range" id="chorus-setting-birth-sensitivity" min="1" max="5" value="3">
+                            <div class="chorus-mini-slider__val" id="chorus-birth-sensitivity-val">MED</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Readings -->
+            <div class="chorus-card">
+                <div class="chorus-settings-group">
+                    <div class="chorus-settings-group__title">READINGS</div>
+
+                    <div class="chorus-setting">
+                        <div>
+                            <div class="chorus-setting__label">AUTO-DRAW</div>
+                            <div class="chorus-setting__desc">Automatically redraw spread</div>
+                        </div>
+                        <div class="chorus-toggle on" id="chorus-setting-auto-draw">
+                            <div class="chorus-toggle__dot"></div>
+                        </div>
+                    </div>
+
+                    <div class="chorus-setting">
+                        <div>
+                            <div class="chorus-setting__label">DRAW FREQUENCY</div>
+                            <div class="chorus-setting__desc">Messages between auto-draws</div>
+                        </div>
+                        <div class="chorus-mini-slider">
+                            <input type="range" id="chorus-setting-draw-freq" min="1" max="10" value="3">
+                            <div class="chorus-mini-slider__val" id="chorus-draw-freq-val">3</div>
+                        </div>
+                    </div>
+
+                    <div class="chorus-setting">
+                        <div>
+                            <div class="chorus-setting__label">DEFAULT SPREAD</div>
+                            <div class="chorus-setting__desc">Spread type for auto-draws</div>
+                        </div>
+                        <div class="chorus-picker" id="chorus-setting-default-spread">
+                            <button class="chorus-picker__opt" data-value="single">1</button>
+                            <button class="chorus-picker__opt active" data-value="three">3</button>
+                            <button class="chorus-picker__opt" data-value="cross">5</button>
+                        </div>
+                    </div>
+
+                    <div class="chorus-setting">
+                        <div>
+                            <div class="chorus-setting__label">REVERSAL CHANCE</div>
+                            <div class="chorus-setting__desc">% chance a card is reversed</div>
+                        </div>
+                        <div class="chorus-mini-slider">
+                            <input type="range" id="chorus-setting-reversal-chance" min="0" max="50" step="5" value="15">
+                            <div class="chorus-mini-slider__val" id="chorus-reversal-chance-val">15%</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Influence -->
+            <div class="chorus-card">
+                <div class="chorus-settings-group">
+                    <div class="chorus-settings-group__title">INFLUENCE</div>
+
+                    <div class="chorus-setting">
+                        <div>
+                            <div class="chorus-setting__label">GAIN RATE</div>
+                            <div class="chorus-setting__desc">How fast voices grow</div>
+                        </div>
+                        <div class="chorus-mini-slider">
+                            <input type="range" id="chorus-setting-gain-rate" min="1" max="5" value="3">
+                            <div class="chorus-mini-slider__val" id="chorus-gain-rate-val">MED</div>
+                        </div>
+                    </div>
+
+                    <div class="chorus-setting">
+                        <div>
+                            <div class="chorus-setting__label">NATURAL DECAY</div>
+                            <div class="chorus-setting__desc">Influence decreases over time</div>
+                        </div>
+                        <div class="chorus-toggle" id="chorus-setting-decay">
+                            <div class="chorus-toggle__dot"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Hijack (future) -->
+            <div class="chorus-card">
+                <div class="chorus-settings-group">
+                    <div class="chorus-settings-group__title">HIJACK SYSTEM</div>
+
+                    <div class="chorus-setting">
+                        <div>
+                            <div class="chorus-setting__label">ENABLED</div>
+                            <div class="chorus-setting__desc">Allow voice interception</div>
+                        </div>
+                        <div class="chorus-toggle" id="chorus-setting-hijack">
+                            <div class="chorus-toggle__dot"></div>
+                        </div>
+                    </div>
+
+                    <div class="chorus-setting">
+                        <div>
+                            <div class="chorus-setting__label">MAX TIER</div>
+                            <div class="chorus-setting__desc">Highest hijack level</div>
+                        </div>
+                        <div class="chorus-picker" id="chorus-setting-hijack-tier">
+                            <button class="chorus-picker__opt active" data-value="1">T1</button>
+                            <button class="chorus-picker__opt" data-value="2">T2</button>
+                            <button class="chorus-picker__opt" data-value="3">T3</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Danger Zone -->
+            <div class="chorus-card chorus-card--danger">
+                <div class="chorus-settings-group">
+                    <div class="chorus-settings-group__title chorus-settings-group__title--danger">DANGER ZONE</div>
+
+                    <div class="chorus-setting">
+                        <div>
+                            <div class="chorus-setting__label" style="color: var(--chorus-reversal)">SILENCE ALL</div>
+                            <div class="chorus-setting__desc">Kill all voices, empty deck</div>
+                        </div>
+                        <button class="chorus-btn-danger" id="chorus-btn-reset">RESET</button>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+    </div><!-- /chorus-content -->
+
+    <!-- Status Bar -->
+    <div class="chorus-status">
+        <div class="chorus-status__text" id="chorus-status-left">0 VOICES</div>
+        <div class="chorus-status__pips" id="chorus-status-pips">
+            <!-- Voice color pips injected here by JS -->
+        </div>
+        <div class="chorus-status__text" id="chorus-status-right">NO READING</div>
+    </div>
+
+</div><!-- /chorus-panel -->
+
+<!-- Awakening Overlay (voice birth) -->
+<div class="chorus-awakening-overlay" id="chorus-awakening-overlay">
+    <div class="chorus-awakening-card" id="chorus-awakening-card">
+        <div class="chorus-scanlines"></div>
+    </div>
+    <div class="chorus-awakening__label" id="chorus-awakening-label">A VOICE AWAKENS</div>
+</div>
+
+<!-- Dissolution Overlay (voice death) -->
+<div class="chorus-dissolution-overlay" id="chorus-dissolution-overlay">
+    <div class="chorus-awakening-card" id="chorus-dissolution-card">
+        <div class="chorus-scanlines"></div>
+    </div>
+    <div class="chorus-awakening__label" id="chorus-dissolution-label">A VOICE FALLS SILENT</div>
+</div>

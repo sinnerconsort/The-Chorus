@@ -1,0 +1,1610 @@
+/* =============================================================================
+   THE CHORUS — SillyTavern Extension Stylesheet
+   A chorus that has long fallen silent, now out of tune.
+   
+   Namespace: chorus-  (all classes prefixed to avoid ST conflicts)
+   Architecture: Mobile-first, panel-based with tab navigation
+   Aesthetic: Dark mystical + digital corruption / tarot compendium
+   ============================================================================= */
+
+/* =============================================================================
+   CSS VARIABLES — Theme tokens
+   ============================================================================= */
+:root {
+    /* Core palette */
+    --chorus-bg-deep:        #050210;
+    --chorus-bg-base:        #0a0612;
+    --chorus-bg-surface:     #0d0816;
+    --chorus-bg-elevated:    rgba(13, 8, 22, 0.8);
+    --chorus-bg-overlay:     rgba(5, 2, 10, 0.95);
+
+    /* Gold / accent */
+    --chorus-gold:           #c9a84c;
+    --chorus-gold-dim:       #c9a84c88;
+    --chorus-gold-faint:     #c9a84c44;
+    --chorus-gold-ghost:     #c9a84c22;
+    --chorus-gold-glow:      rgba(201, 168, 76, 0.3);
+    --chorus-gold-surface:   rgba(201, 168, 76, 0.06);
+
+    /* Text */
+    --chorus-text-primary:   #e8d5b0;
+    --chorus-text-secondary: #a89878;
+    --chorus-text-muted:     #776655;
+    --chorus-text-ghost:     #55504a;
+    --chorus-text-dead:      #44403a;
+
+    /* Voice state colors */
+    --chorus-state-dormant:  #667;
+    --chorus-state-active:   #8c8;
+    --chorus-state-agitated: #f66;
+    --chorus-state-hijack:   #f33;
+    --chorus-state-dead:     #444;
+
+    /* Danger / reversal */
+    --chorus-danger:         #ff2244;
+    --chorus-danger-dim:     #ff224466;
+    --chorus-danger-faint:   #ff224422;
+    --chorus-reversal:       #ff666688;
+
+    /* Typography */
+    --chorus-font-display:   'Cinzel Decorative', 'Cinzel', serif;
+    --chorus-font-heading:   'Cinzel', serif;
+    --chorus-font-body:      'Crimson Text', serif;
+    --chorus-font-mono:      'Courier Prime', monospace;
+
+    /* Spacing */
+    --chorus-panel-padding:  12px;
+    --chorus-card-radius:    8px;
+    --chorus-card-radius-sm: 5px;
+
+    /* Transitions */
+    --chorus-ease-out:       cubic-bezier(0.23, 1, 0.32, 1);
+    --chorus-ease-bounce:    cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+
+/* =============================================================================
+   FONT IMPORTS
+   ============================================================================= */
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Cinzel+Decorative:wght@400;700&family=Crimson+Text:ital,wght@0,400;0,600;1,400&family=Courier+Prime:ital@0;1&display=swap');
+
+
+/* =============================================================================
+   FAB (Floating Action Button)
+   ============================================================================= */
+#chorus-fab {
+    position: fixed;
+    z-index: 9998;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: var(--chorus-bg-surface);
+    border: 1px solid var(--chorus-gold-faint);
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.5), 0 0 15px var(--chorus-gold-glow);
+    color: var(--chorus-gold);
+    font-size: 20px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: box-shadow 0.3s, transform 0.2s;
+    touch-action: none; /* for drag */
+}
+
+#chorus-fab:active {
+    transform: scale(0.93);
+}
+
+#chorus-fab.chorus-fab--active {
+    border-color: var(--chorus-gold-dim);
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.5), 0 0 25px var(--chorus-gold-glow);
+}
+
+/* Notification pip on FAB */
+#chorus-fab .chorus-fab__pip {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--chorus-state-agitated);
+    border: 2px solid var(--chorus-bg-surface);
+    display: none;
+}
+
+#chorus-fab .chorus-fab__pip.visible {
+    display: block;
+    animation: chorus-pip-pulse 1.5s ease-in-out infinite;
+}
+
+
+/* =============================================================================
+   PANEL SHELL
+   ============================================================================= */
+#chorus-panel {
+    display: none;
+    position: fixed;
+    z-index: 9999;
+    background: radial-gradient(ellipse at 50% 0%, #1a0a2e 0%, var(--chorus-bg-base) 40%, var(--chorus-bg-deep) 100%);
+    color: var(--chorus-text-primary);
+    font-family: var(--chorus-font-body);
+    flex-direction: column;
+    overflow: hidden;
+}
+
+#chorus-panel.open {
+    display: flex;
+}
+
+/* Mobile: full screen overlay */
+@media (max-width: 1000px) {
+    #chorus-panel {
+        inset: 0;
+        border-radius: 0;
+    }
+}
+
+/* Desktop: sidebar panel */
+@media (min-width: 1001px) {
+    #chorus-panel {
+        top: 0;
+        right: 0;
+        bottom: 0;
+        width: 400px;
+        border-left: 1px solid var(--chorus-gold-ghost);
+        box-shadow: -4px 0 20px rgba(0, 0, 0, 0.5);
+    }
+}
+
+/* Panel open/close animations */
+#chorus-panel.chorus-panel--opening {
+    animation: chorus-panel-open 0.35s var(--chorus-ease-out) forwards;
+}
+
+#chorus-panel.chorus-panel--closing {
+    animation: chorus-panel-close 0.3s ease-in forwards;
+}
+
+@keyframes chorus-panel-open {
+    from { opacity: 0; transform: translateX(20px); }
+    to   { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes chorus-panel-close {
+    from { opacity: 1; transform: translateX(0); }
+    to   { opacity: 0; transform: translateX(20px); }
+}
+
+@media (max-width: 1000px) {
+    @keyframes chorus-panel-open {
+        from { opacity: 0; }
+        to   { opacity: 1; }
+    }
+    @keyframes chorus-panel-close {
+        from { opacity: 1; }
+        to   { opacity: 0; }
+    }
+}
+
+
+/* =============================================================================
+   PANEL HEADER
+   ============================================================================= */
+.chorus-header {
+    padding: 12px 16px 10px;
+    background: rgba(13, 8, 22, 0.95);
+    border-bottom: 1px solid rgba(201, 168, 76, 0.08);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    z-index: 10;
+}
+
+.chorus-header__title {
+    font-family: var(--chorus-font-display);
+    font-size: 16px;
+    letter-spacing: 4px;
+    color: var(--chorus-gold);
+    text-shadow: 0 0 20px var(--chorus-gold-glow);
+    user-select: none;
+}
+
+.chorus-header__actions {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+}
+
+.chorus-header__btn {
+    width: 30px;
+    height: 30px;
+    border-radius: 6px;
+    background: var(--chorus-gold-surface);
+    border: 1px solid var(--chorus-gold-ghost);
+    color: var(--chorus-gold-dim);
+    font-size: 14px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    outline: none;
+    padding: 0;
+}
+
+.chorus-header__btn:active {
+    background: rgba(201, 168, 76, 0.15);
+}
+
+.chorus-header__btn.active {
+    background: rgba(201, 168, 76, 0.12);
+    border-color: var(--chorus-gold-dim);
+    color: var(--chorus-gold);
+}
+
+
+/* =============================================================================
+   TAB BAR
+   ============================================================================= */
+.chorus-tabs {
+    display: flex;
+    background: rgba(13, 8, 22, 0.9);
+    border-bottom: 1px solid rgba(201, 168, 76, 0.06);
+    flex-shrink: 0;
+    overflow-x: auto;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+    z-index: 9;
+}
+
+.chorus-tabs::-webkit-scrollbar {
+    display: none;
+}
+
+.chorus-tabs__btn {
+    flex: 1;
+    min-width: 0;
+    padding: 9px 4px 7px;
+    text-align: center;
+    font-family: var(--chorus-font-mono);
+    font-size: 8px;
+    letter-spacing: 1px;
+    color: var(--chorus-text-ghost);
+    cursor: pointer;
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid transparent;
+    transition: all 0.3s;
+    outline: none;
+    white-space: nowrap;
+}
+
+.chorus-tabs__btn:active {
+    background: rgba(201, 168, 76, 0.08);
+}
+
+.chorus-tabs__btn.active {
+    color: var(--chorus-gold);
+    border-bottom-color: var(--chorus-gold-faint);
+    background: rgba(201, 168, 76, 0.04);
+}
+
+.chorus-tabs__icon {
+    font-size: 14px;
+    display: block;
+    margin-bottom: 2px;
+}
+
+
+/* =============================================================================
+   TAB CONTENT AREA
+   ============================================================================= */
+.chorus-content {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: var(--chorus-panel-padding);
+    scroll-behavior: smooth;
+    scrollbar-width: thin;
+    scrollbar-color: var(--chorus-gold-ghost) transparent;
+}
+
+.chorus-content::-webkit-scrollbar {
+    width: 4px;
+}
+
+.chorus-content::-webkit-scrollbar-thumb {
+    background: var(--chorus-gold-ghost);
+    border-radius: 2px;
+}
+
+.chorus-page {
+    display: none;
+}
+
+.chorus-page.active {
+    display: block;
+    animation: chorus-page-in 0.25s ease-out;
+}
+
+@keyframes chorus-page-in {
+    from { opacity: 0; transform: translateY(6px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+
+/* =============================================================================
+   STATUS BAR (Bottom)
+   ============================================================================= */
+.chorus-status {
+    padding: 6px 12px;
+    background: rgba(13, 8, 22, 0.95);
+    border-top: 1px solid rgba(201, 168, 76, 0.06);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    z-index: 10;
+}
+
+.chorus-status__text {
+    font-family: var(--chorus-font-mono);
+    font-size: 8px;
+    color: var(--chorus-text-dead);
+    letter-spacing: 1px;
+}
+
+.chorus-status__pips {
+    display: flex;
+    gap: 3px;
+}
+
+.chorus-status__pip {
+    width: 8px;
+    height: 8px;
+    border-radius: 2px;
+    transition: background 0.5s, box-shadow 0.5s;
+}
+
+
+/* =============================================================================
+   SHARED UI COMPONENTS
+   ============================================================================= */
+
+/* --- Section titles --- */
+.chorus-sec-title {
+    font-family: var(--chorus-font-heading);
+    font-size: 12px;
+    color: var(--chorus-gold);
+    letter-spacing: 2px;
+    text-align: center;
+    margin-bottom: 4px;
+}
+
+.chorus-sec-sub {
+    font-family: var(--chorus-font-mono);
+    font-size: 8px;
+    color: var(--chorus-text-ghost);
+    letter-spacing: 1px;
+    text-align: center;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+}
+
+/* --- Divider --- */
+.chorus-divider {
+    width: 80px;
+    height: 1px;
+    margin: 16px auto;
+    background: linear-gradient(to right, transparent, var(--chorus-gold-faint), transparent);
+}
+
+/* --- Panel card (content container) --- */
+.chorus-card {
+    background: rgba(13, 8, 22, 0.6);
+    border: 1px solid rgba(201, 168, 76, 0.07);
+    border-radius: var(--chorus-card-radius);
+    padding: 12px;
+    margin-bottom: 12px;
+}
+
+.chorus-card--danger {
+    border-color: var(--chorus-danger-faint);
+}
+
+/* --- Scanline overlay (reusable) --- */
+.chorus-scanlines {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: repeating-linear-gradient(
+        0deg,
+        transparent, transparent 2px,
+        rgba(0, 0, 0, 0.03) 2px, rgba(0, 0, 0, 0.03) 4px
+    );
+    z-index: 4;
+}
+
+/* --- Gold frame (double border for cards) --- */
+.chorus-frame-outer {
+    position: absolute;
+    inset: 5px;
+    border: 1px solid var(--chorus-gold-faint);
+    border-radius: 4px;
+    pointer-events: none;
+    z-index: 3;
+}
+
+.chorus-frame-inner {
+    position: absolute;
+    inset: 9px;
+    border: 1px solid var(--chorus-gold-ghost);
+    border-radius: 2px;
+    pointer-events: none;
+    z-index: 3;
+}
+
+
+/* =============================================================================
+   SPREAD PILLS (spread type selector)
+   ============================================================================= */
+.chorus-spread-pills {
+    display: flex;
+    gap: 6px;
+    justify-content: center;
+    margin-bottom: 14px;
+}
+
+.chorus-spread-pill {
+    font-family: var(--chorus-font-mono);
+    font-size: 8px;
+    letter-spacing: 1px;
+    padding: 5px 12px;
+    border-radius: 20px;
+    cursor: pointer;
+    background: rgba(13, 8, 22, 0.6);
+    border: 1px solid var(--chorus-gold-ghost);
+    color: var(--chorus-text-ghost);
+    outline: none;
+    transition: all 0.3s;
+}
+
+.chorus-spread-pill:active {
+    background: rgba(201, 168, 76, 0.12);
+}
+
+.chorus-spread-pill.active {
+    color: var(--chorus-gold);
+    border-color: var(--chorus-gold-dim);
+    background: rgba(201, 168, 76, 0.08);
+}
+
+
+/* =============================================================================
+   SPREAD LAYOUTS
+   ============================================================================= */
+.chorus-spread {
+    margin: 0 auto 12px;
+}
+
+.chorus-spread--single {
+    display: flex;
+    justify-content: center;
+    min-height: 140px;
+    align-items: center;
+}
+
+.chorus-spread--three {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    min-height: 160px;
+    align-items: flex-start;
+}
+
+.chorus-spread--cross {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    grid-template-rows: auto auto auto;
+    gap: 6px;
+    max-width: 260px;
+    margin: 0 auto;
+    min-height: 250px;
+    justify-items: center;
+    align-items: center;
+}
+
+/* Spread slot */
+.chorus-slot {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+}
+
+.chorus-slot__label {
+    font-family: var(--chorus-font-mono);
+    font-size: 6px;
+    color: var(--chorus-gold-faint);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+}
+
+
+/* =============================================================================
+   TAROT CARD (mini — used in spreads, fan, grid)
+   ============================================================================= */
+.chorus-mini-card {
+    width: 72px;
+    height: 106px;
+    border-radius: var(--chorus-card-radius-sm);
+    overflow: hidden;
+    position: relative;
+    background: var(--chorus-bg-surface);
+    border: 1px solid var(--chorus-gold-faint);
+    transition: transform 0.4s var(--chorus-ease-out),
+                box-shadow 0.3s,
+                opacity 0.4s,
+                border-color 0.3s;
+}
+
+/* Card content */
+.chorus-mini-card__glyph {
+    font-size: 20px;
+    text-align: center;
+    padding-top: 10px;
+    position: relative;
+    z-index: 1;
+}
+
+.chorus-mini-card__name {
+    font-family: var(--chorus-font-heading);
+    font-size: 7px;
+    color: var(--chorus-text-primary);
+    text-align: center;
+    letter-spacing: 0.5px;
+    padding: 2px;
+    position: relative;
+    z-index: 1;
+}
+
+.chorus-mini-card__arcana {
+    font-family: var(--chorus-font-mono);
+    font-size: 5px;
+    color: var(--chorus-gold-faint);
+    text-align: center;
+    letter-spacing: 1px;
+    position: relative;
+    z-index: 1;
+}
+
+.chorus-mini-card__influence {
+    font-family: var(--chorus-font-mono);
+    font-size: 6px;
+    color: var(--chorus-gold-faint);
+    text-align: center;
+    position: relative;
+    z-index: 2;
+}
+
+.chorus-mini-card__reversed {
+    font-family: var(--chorus-font-mono);
+    font-size: 6px;
+    color: var(--chorus-reversal);
+    text-align: center;
+    letter-spacing: 1px;
+}
+
+.chorus-mini-card__pos-label {
+    font-family: var(--chorus-font-mono);
+    font-size: 5px;
+    color: var(--chorus-gold-ghost);
+    text-align: center;
+    letter-spacing: 1px;
+}
+
+/* Ink bleed container */
+.chorus-mini-card__ink {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    pointer-events: none;
+    transition: height 1.5s var(--chorus-ease-out);
+}
+
+/* Scanline on mini cards */
+.chorus-mini-card::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: repeating-linear-gradient(
+        0deg,
+        transparent, transparent 2px,
+        rgba(0, 0, 0, 0.03) 2px, rgba(0, 0, 0, 0.03) 4px
+    );
+}
+
+/* --- Card state modifiers --- */
+.chorus-mini-card--dormant {
+    border-color: rgba(201, 168, 76, 0.1);
+    opacity: 0.55;
+}
+
+.chorus-mini-card--active {
+    border-color: var(--chorus-gold-faint);
+}
+
+.chorus-mini-card--agitated {
+    animation: chorus-card-agitate 1.5s ease-in-out infinite;
+}
+
+.chorus-mini-card--dead {
+    opacity: 0.2;
+    filter: saturate(0) brightness(0.5);
+    pointer-events: none;
+}
+
+/* Reversed card */
+.chorus-mini-card--reversed .chorus-mini-card__glyph {
+    transform: rotate(180deg);
+}
+
+.chorus-mini-card--reversed {
+    border-color: var(--chorus-danger-dim) !important;
+}
+
+/* In-spread indicator (dimmed in fan when placed in spread) */
+.chorus-mini-card--in-spread {
+    opacity: 0.35;
+}
+
+.chorus-mini-card--in-spread::before {
+    content: '✦';
+    position: absolute;
+    top: 2px;
+    right: 4px;
+    font-size: 8px;
+    color: var(--chorus-gold-faint);
+    z-index: 5;
+}
+
+/* Card flip-in animation (spread reveal) */
+.chorus-mini-card--revealing {
+    animation: chorus-card-reveal 0.6s var(--chorus-ease-out);
+}
+
+@keyframes chorus-card-reveal {
+    0%   { transform: rotateY(90deg) scale(0.85); opacity: 0; }
+    50%  { transform: rotateY(-4deg) scale(1.01); }
+    100% { transform: rotateY(0) scale(1); opacity: 1; }
+}
+
+@keyframes chorus-card-agitate {
+    0%, 100% { box-shadow: 0 0 8px var(--chorus-danger-faint); }
+    50%      { box-shadow: 0 0 16px var(--chorus-danger-dim), inset 0 0 8px var(--chorus-danger-faint); }
+}
+
+/* Empty slot */
+.chorus-mini-card--empty {
+    border: 1px dashed rgba(201, 168, 76, 0.1);
+    background: rgba(13, 8, 22, 0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0.5;
+}
+
+.chorus-mini-card--empty .chorus-empty-q {
+    font-size: 18px;
+    color: rgba(201, 168, 76, 0.08);
+}
+
+
+/* =============================================================================
+   FAN (Card collection — fanned hand)
+   ============================================================================= */
+.chorus-fan {
+    position: relative;
+    height: 155px;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    margin-bottom: 14px;
+}
+
+.chorus-fan__card {
+    width: 66px;
+    height: 100px;
+    position: absolute;
+    bottom: 0;
+    transform-origin: bottom center;
+    border-radius: var(--chorus-card-radius-sm);
+    overflow: hidden;
+    background: var(--chorus-bg-surface);
+    cursor: pointer;
+    transition: transform 0.4s var(--chorus-ease-out), opacity 0.3s;
+}
+
+.chorus-fan__card:active {
+    z-index: 20 !important;
+}
+
+/* Fan card internal elements inherit mini-card styles */
+.chorus-fan__card .chorus-mini-card__glyph {
+    font-size: 16px;
+    padding-top: 8px;
+}
+
+.chorus-fan__card .chorus-mini-card__name {
+    font-size: 6px;
+}
+
+.chorus-fan__card::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: repeating-linear-gradient(
+        0deg,
+        transparent, transparent 2px,
+        rgba(0, 0, 0, 0.03) 2px, rgba(0, 0, 0, 0.03) 4px
+    );
+}
+
+.chorus-fan__label {
+    text-align: center;
+    font-family: var(--chorus-font-mono);
+    font-size: 8px;
+    color: var(--chorus-text-dead);
+    letter-spacing: 1px;
+    margin-top: 4px;
+}
+
+
+/* =============================================================================
+   DECK STATS
+   ============================================================================= */
+.chorus-deck-stats {
+    display: flex;
+    justify-content: space-around;
+    padding: 10px;
+    margin-bottom: 10px;
+}
+
+.chorus-deck-stat {
+    text-align: center;
+}
+
+.chorus-deck-stat__val {
+    font-family: var(--chorus-font-heading);
+    font-size: 18px;
+    color: var(--chorus-gold);
+}
+
+.chorus-deck-stat__label {
+    font-family: var(--chorus-font-mono);
+    font-size: 7px;
+    color: var(--chorus-text-ghost);
+    letter-spacing: 1px;
+}
+
+
+/* =============================================================================
+   VOICE DETAIL (expandable card info in deck tab)
+   ============================================================================= */
+.chorus-voice-detail {
+    background: var(--chorus-bg-elevated);
+    border: 1px solid rgba(201, 168, 76, 0.08);
+    border-radius: var(--chorus-card-radius);
+    padding: 14px;
+    margin-bottom: 10px;
+    display: none;
+}
+
+.chorus-voice-detail.open {
+    display: block;
+    animation: chorus-slide-down 0.3s ease-out;
+}
+
+@keyframes chorus-slide-down {
+    from { opacity: 0; transform: translateY(-8px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+.chorus-voice-detail__header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+}
+
+.chorus-voice-detail__glyph {
+    font-size: 24px;
+}
+
+.chorus-voice-detail__name {
+    font-family: var(--chorus-font-heading);
+    font-size: 13px;
+    letter-spacing: 1px;
+}
+
+.chorus-voice-detail__arcana {
+    font-family: var(--chorus-font-mono);
+    font-size: 8px;
+    color: var(--chorus-gold-dim);
+    letter-spacing: 1px;
+}
+
+.chorus-voice-detail__close {
+    font-size: 16px;
+    color: var(--chorus-text-ghost);
+    cursor: pointer;
+    background: none;
+    border: none;
+    outline: none;
+    padding: 4px;
+    margin-left: auto;
+}
+
+.chorus-voice-detail__label {
+    font-family: var(--chorus-font-mono);
+    font-size: 7px;
+    color: var(--chorus-text-muted);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin: 8px 0 4px;
+}
+
+.chorus-voice-detail__text {
+    font-size: 12px;
+    color: var(--chorus-text-secondary);
+    line-height: 1.4;
+    font-style: italic;
+}
+
+/* Influence bar */
+.chorus-inf-bar {
+    height: 4px;
+    border-radius: 2px;
+    background: #1a1020;
+    margin-top: 6px;
+    overflow: hidden;
+}
+
+.chorus-inf-bar__fill {
+    height: 100%;
+    border-radius: 2px;
+    transition: width 0.8s var(--chorus-ease-out);
+}
+
+/* Voice detail action buttons */
+.chorus-voice-detail__actions {
+    display: flex;
+    gap: 6px;
+    margin-top: 10px;
+}
+
+.chorus-vd-btn {
+    flex: 1;
+    font-family: var(--chorus-font-mono);
+    font-size: 8px;
+    letter-spacing: 1px;
+    padding: 6px;
+    border-radius: 4px;
+    cursor: pointer;
+    outline: none;
+    text-align: center;
+}
+
+.chorus-vd-btn--talk {
+    background: rgba(100, 80, 30, 0.3);
+    border: 1px solid var(--chorus-gold-faint);
+    color: var(--chorus-gold);
+}
+
+.chorus-vd-btn--info {
+    background: rgba(60, 60, 80, 0.3);
+    border: 1px solid rgba(102, 102, 102, 0.2);
+    color: #888;
+}
+
+.chorus-vd-btn:active {
+    filter: brightness(1.2);
+}
+
+
+/* =============================================================================
+   DRAW BUTTON
+   ============================================================================= */
+.chorus-draw-btn {
+    display: block;
+    margin: 12px auto;
+    font-family: var(--chorus-font-heading);
+    font-size: 10px;
+    letter-spacing: 2px;
+    color: var(--chorus-gold);
+    padding: 8px 24px;
+    border-radius: var(--chorus-card-radius-sm);
+    background: rgba(201, 168, 76, 0.07);
+    border: 1px solid var(--chorus-gold-faint);
+    cursor: pointer;
+    outline: none;
+    transition: all 0.3s;
+}
+
+.chorus-draw-btn:active {
+    background: rgba(201, 168, 76, 0.15);
+    transform: scale(0.97);
+}
+
+.chorus-draw-btn:disabled {
+    opacity: 0.4;
+    pointer-events: none;
+}
+
+
+/* =============================================================================
+   COMMENTARY (positioned voice messages in reading tab)
+   ============================================================================= */
+.chorus-commentary {
+    display: flex;
+    gap: 8px;
+    align-items: flex-start;
+    margin-bottom: 12px;
+}
+
+.chorus-commentary:last-child {
+    margin-bottom: 0;
+}
+
+.chorus-commentary__pip {
+    width: 32px;
+    flex-shrink: 0;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1px;
+}
+
+.chorus-commentary__pip-glyph {
+    font-size: 14px;
+}
+
+.chorus-commentary__pip-pos {
+    font-family: var(--chorus-font-mono);
+    font-size: 5px;
+    color: var(--chorus-gold-faint);
+    letter-spacing: 1px;
+}
+
+.chorus-commentary__pip-rev {
+    font-family: var(--chorus-font-mono);
+    font-size: 5px;
+    color: var(--chorus-reversal);
+    letter-spacing: 1px;
+}
+
+.chorus-commentary__body {
+    flex: 1;
+}
+
+.chorus-commentary__name {
+    font-family: var(--chorus-font-heading);
+    font-size: 9px;
+    letter-spacing: 1px;
+    margin-bottom: 1px;
+}
+
+.chorus-commentary__context {
+    font-family: var(--chorus-font-mono);
+    font-size: 7px;
+    color: var(--chorus-text-dead);
+    margin-bottom: 3px;
+    letter-spacing: 1px;
+}
+
+.chorus-commentary__text {
+    font-size: 12px;
+    color: var(--chorus-text-secondary);
+    line-height: 1.4;
+    font-style: italic;
+}
+
+
+/* =============================================================================
+   COUNCIL (Group chat)
+   ============================================================================= */
+.chorus-council-pips {
+    display: flex;
+    gap: 5px;
+    justify-content: center;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+}
+
+.chorus-council-pip {
+    width: 26px;
+    height: 34px;
+    border-radius: 3px;
+    background: var(--chorus-bg-deep);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    transition: box-shadow 0.3s;
+}
+
+.chorus-council-pip--speaking {
+    animation: chorus-pip-glow 1.5s ease-in-out infinite;
+}
+
+@keyframes chorus-pip-glow {
+    0%, 100% { box-shadow: 0 0 4px var(--pip-color, var(--chorus-gold-faint)); }
+    50%      { box-shadow: 0 0 12px var(--pip-color, var(--chorus-gold-faint)); }
+}
+
+/* Council messages */
+.chorus-council-msg {
+    padding-left: 10px;
+    border-left: 2px solid transparent;
+    margin-bottom: 12px;
+}
+
+.chorus-council-msg--reply {
+    margin-left: 18px;
+    padding-left: 8px;
+    border-left-color: var(--chorus-gold-ghost);
+}
+
+.chorus-council-msg__header {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    margin-bottom: 2px;
+}
+
+.chorus-council-msg__glyph {
+    font-size: 12px;
+}
+
+.chorus-council-msg__name {
+    font-family: var(--chorus-font-heading);
+    font-size: 9px;
+    letter-spacing: 1px;
+}
+
+.chorus-council-msg__text {
+    font-size: 12px;
+    color: var(--chorus-text-secondary);
+    line-height: 1.4;
+    font-style: italic;
+}
+
+/* Council input area */
+.chorus-council-input {
+    margin-top: 8px;
+    padding: 10px;
+    border: 1px solid rgba(201, 168, 76, 0.08);
+    border-radius: 6px;
+    background: rgba(201, 168, 76, 0.02);
+}
+
+.chorus-council-input__label {
+    font-family: var(--chorus-font-mono);
+    font-size: 8px;
+    color: var(--chorus-gold-ghost);
+    letter-spacing: 1px;
+    margin-bottom: 4px;
+}
+
+.chorus-council-input__field {
+    width: 100%;
+    background: transparent;
+    border: none;
+    outline: none;
+    font-family: var(--chorus-font-body);
+    font-size: 12px;
+    color: var(--chorus-text-primary);
+    resize: none;
+}
+
+.chorus-council-input__field::placeholder {
+    color: var(--chorus-text-dead);
+    font-style: italic;
+}
+
+
+/* =============================================================================
+   LOG (Chronicle — birth/death/hijack history)
+   ============================================================================= */
+.chorus-log-entry {
+    display: flex;
+    gap: 8px;
+    align-items: flex-start;
+    padding: 8px 0;
+    border-bottom: 1px solid rgba(201, 168, 76, 0.04);
+}
+
+.chorus-log-entry:last-child {
+    border-bottom: none;
+}
+
+.chorus-log-entry__icon {
+    font-size: 16px;
+    flex-shrink: 0;
+    width: 24px;
+    text-align: center;
+}
+
+.chorus-log-entry__title {
+    font-family: var(--chorus-font-heading);
+    font-size: 10px;
+    color: var(--chorus-text-primary);
+    letter-spacing: 1px;
+}
+
+.chorus-log-entry__desc {
+    font-size: 11px;
+    color: var(--chorus-text-muted);
+    font-style: italic;
+    line-height: 1.3;
+    margin-top: 2px;
+}
+
+.chorus-log-entry__time {
+    font-family: var(--chorus-font-mono);
+    font-size: 7px;
+    color: var(--chorus-text-dead);
+    margin-top: 3px;
+    letter-spacing: 1px;
+}
+
+.chorus-log-tag {
+    display: inline-block;
+    font-family: var(--chorus-font-mono);
+    font-size: 6px;
+    letter-spacing: 1px;
+    padding: 1px 5px;
+    border-radius: 2px;
+    margin-top: 3px;
+}
+
+.chorus-log-tag--birth {
+    background: rgba(201, 168, 76, 0.1);
+    color: var(--chorus-gold-dim);
+    border: 1px solid var(--chorus-gold-ghost);
+}
+
+.chorus-log-tag--death {
+    background: rgba(255, 34, 68, 0.08);
+    color: rgba(255, 102, 102, 0.4);
+    border: 1px solid var(--chorus-danger-faint);
+}
+
+.chorus-log-tag--hijack {
+    background: rgba(160, 50, 50, 0.1);
+    color: rgba(255, 136, 136, 0.4);
+    border: 1px solid rgba(255, 68, 68, 0.13);
+}
+
+
+/* =============================================================================
+   SETTINGS
+   ============================================================================= */
+.chorus-settings-group {
+    margin-bottom: 16px;
+}
+
+.chorus-settings-group__title {
+    font-family: var(--chorus-font-heading);
+    font-size: 10px;
+    color: var(--chorus-gold-dim);
+    letter-spacing: 2px;
+    margin-bottom: 10px;
+    padding-bottom: 4px;
+    border-bottom: 1px solid rgba(201, 168, 76, 0.06);
+}
+
+.chorus-settings-group__title--danger {
+    color: rgba(255, 102, 102, 0.4);
+    border-bottom-color: rgba(255, 34, 68, 0.06);
+}
+
+.chorus-setting {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 0;
+    border-bottom: 1px solid rgba(201, 168, 76, 0.04);
+}
+
+.chorus-setting:last-child {
+    border-bottom: none;
+}
+
+.chorus-setting__label {
+    font-family: var(--chorus-font-mono);
+    font-size: 9px;
+    color: var(--chorus-text-secondary);
+    letter-spacing: 1px;
+}
+
+.chorus-setting__desc {
+    font-family: var(--chorus-font-body);
+    font-size: 10px;
+    color: var(--chorus-text-ghost);
+    font-style: italic;
+    margin-top: 1px;
+}
+
+/* Toggle switch */
+.chorus-toggle {
+    width: 36px;
+    height: 18px;
+    border-radius: 9px;
+    background: #1a1020;
+    border: 1px solid var(--chorus-gold-ghost);
+    cursor: pointer;
+    position: relative;
+    transition: background 0.3s, border-color 0.3s;
+    flex-shrink: 0;
+}
+
+.chorus-toggle.on {
+    background: rgba(201, 168, 76, 0.2);
+    border-color: var(--chorus-gold-dim);
+}
+
+.chorus-toggle__dot {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: var(--chorus-gold);
+    transition: left 0.3s;
+}
+
+.chorus-toggle.on .chorus-toggle__dot {
+    left: 20px;
+}
+
+/* Mini slider */
+.chorus-mini-slider {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+}
+
+.chorus-mini-slider input[type="range"] {
+    width: 80px;
+    height: 3px;
+    -webkit-appearance: none;
+    appearance: none;
+    background: #1a1020;
+    border-radius: 2px;
+    outline: none;
+}
+
+.chorus-mini-slider input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: var(--chorus-gold);
+    cursor: pointer;
+}
+
+.chorus-mini-slider__val {
+    font-family: var(--chorus-font-mono);
+    font-size: 8px;
+    color: var(--chorus-text-ghost);
+    min-width: 28px;
+    text-align: right;
+}
+
+/* Picker (segmented control) */
+.chorus-picker {
+    display: flex;
+    gap: 0;
+    border-radius: 4px;
+    overflow: hidden;
+    border: 1px solid var(--chorus-gold-ghost);
+    flex-shrink: 0;
+}
+
+.chorus-picker__opt {
+    padding: 4px 8px;
+    font-family: var(--chorus-font-mono);
+    font-size: 7px;
+    letter-spacing: 1px;
+    color: var(--chorus-text-ghost);
+    background: var(--chorus-bg-surface);
+    border: none;
+    cursor: pointer;
+    outline: none;
+    border-right: 1px solid rgba(201, 168, 76, 0.06);
+    transition: all 0.2s;
+}
+
+.chorus-picker__opt:last-child {
+    border-right: none;
+}
+
+.chorus-picker__opt.active {
+    color: var(--chorus-gold);
+    background: rgba(201, 168, 76, 0.1);
+}
+
+.chorus-picker__opt:active {
+    background: rgba(201, 168, 76, 0.15);
+}
+
+/* Select dropdown */
+.chorus-select {
+    padding: 5px 10px;
+    border-radius: 4px;
+    background: var(--chorus-bg-surface);
+    border: 1px solid var(--chorus-gold-ghost);
+    font-family: var(--chorus-font-mono);
+    font-size: 8px;
+    color: var(--chorus-text-secondary);
+    outline: none;
+    cursor: pointer;
+    letter-spacing: 1px;
+}
+
+/* Reset/danger button */
+.chorus-btn-danger {
+    font-family: var(--chorus-font-mono);
+    font-size: 8px;
+    letter-spacing: 1px;
+    padding: 5px 10px;
+    border-radius: 4px;
+    background: rgba(160, 50, 50, 0.2);
+    border: 1px solid rgba(255, 34, 68, 0.2);
+    color: var(--chorus-state-agitated);
+    cursor: pointer;
+    outline: none;
+}
+
+.chorus-btn-danger:active {
+    background: rgba(160, 50, 50, 0.35);
+}
+
+
+/* =============================================================================
+   INTRUSION OVERLAY (Tier 1 hijack — future)
+   ============================================================================= */
+.chorus-intrusion {
+    display: none;
+    background: var(--chorus-bg-elevated);
+    border: 1px solid var(--chorus-danger-dim);
+    border-radius: 10px;
+    padding: 16px;
+}
+
+.chorus-intrusion.active {
+    display: block;
+    animation: chorus-slide-down 0.3s ease-out;
+}
+
+.chorus-intrusion__header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
+.chorus-intrusion__title {
+    font-family: var(--chorus-font-heading);
+    font-size: 11px;
+    letter-spacing: 1px;
+}
+
+.chorus-intrusion__tier {
+    font-family: var(--chorus-font-mono);
+    font-size: 8px;
+    letter-spacing: 1px;
+}
+
+.chorus-intrusion__msg {
+    padding: 10px;
+    border: 1px solid rgba(201, 168, 76, 0.06);
+    border-radius: 6px;
+    margin-bottom: 8px;
+    background: rgba(201, 168, 76, 0.02);
+}
+
+.chorus-intrusion__msg--voice {
+    border-color: var(--chorus-danger-faint);
+    background: rgba(255, 34, 68, 0.02);
+}
+
+.chorus-intrusion__msg-label {
+    font-family: var(--chorus-font-mono);
+    font-size: 8px;
+    color: var(--chorus-text-ghost);
+    margin-bottom: 4px;
+    letter-spacing: 1px;
+}
+
+.chorus-intrusion__msg-text {
+    font-size: 13px;
+    color: var(--chorus-text-secondary);
+    font-style: italic;
+}
+
+.chorus-intrusion__actions {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    margin-top: 12px;
+}
+
+.chorus-intrusion__btn {
+    font-family: var(--chorus-font-mono);
+    font-size: 9px;
+    letter-spacing: 1px;
+    padding: 7px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+    outline: none;
+    transition: all 0.2s;
+}
+
+.chorus-intrusion__btn--resist {
+    background: rgba(80, 120, 80, 0.3);
+    border: 1px solid rgba(140, 204, 140, 0.25);
+    color: var(--chorus-state-active);
+}
+
+.chorus-intrusion__btn--redirect {
+    background: rgba(100, 80, 30, 0.3);
+    border: 1px solid var(--chorus-gold-faint);
+    color: var(--chorus-gold);
+}
+
+.chorus-intrusion__btn--give-in {
+    background: rgba(160, 50, 50, 0.3);
+    border: 1px solid var(--chorus-danger-dim);
+    color: var(--chorus-state-agitated);
+}
+
+.chorus-intrusion__btn:active {
+    filter: brightness(1.3);
+    transform: scale(0.97);
+}
+
+
+/* =============================================================================
+   AWAKENING OVERLAY (full-screen voice birth)
+   ============================================================================= */
+.chorus-awakening-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 10001;
+    background: var(--chorus-bg-overlay);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 20px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.8s;
+}
+
+.chorus-awakening-overlay.visible {
+    opacity: 1;
+    pointer-events: all;
+}
+
+.chorus-awakening-card {
+    width: 200px;
+    height: 310px;
+    border-radius: 10px;
+    background: var(--chorus-bg-surface);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 10px;
+    transition: all 1s var(--chorus-ease-out);
+    transform: scale(1.15);
+    opacity: 0;
+    position: relative;
+    overflow: hidden;
+}
+
+.chorus-awakening-overlay.visible .chorus-awakening-card {
+    transform: scale(1);
+    opacity: 1;
+}
+
+.chorus-awakening__label {
+    font-family: var(--chorus-font-mono);
+    font-size: 10px;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    transition: opacity 0.8s;
+}
+
+
+/* =============================================================================
+   DISSOLUTION OVERLAY (voice death)
+   ============================================================================= */
+.chorus-dissolution-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 10001;
+    background: var(--chorus-bg-overlay);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 20px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.6s;
+}
+
+.chorus-dissolution-overlay.visible {
+    opacity: 1;
+    pointer-events: all;
+}
+
+.chorus-dissolution-overlay.dying .chorus-awakening-card {
+    transform: scale(0.9);
+    filter: saturate(0) brightness(0.5);
+    border-color: rgba(51, 51, 51, 0.4) !important;
+    box-shadow: none !important;
+}
+
+
+/* =============================================================================
+   UTILITY / SHARED ANIMATIONS
+   ============================================================================= */
+@keyframes chorus-pip-pulse {
+    0%, 100% { transform: scale(1); }
+    50%      { transform: scale(1.3); }
+}
+
+@keyframes chorus-fade-in {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
+
+@keyframes chorus-msg-in {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Message appearance */
+.chorus-msg-enter {
+    animation: chorus-msg-in 0.5s ease-out;
+}
+
+
+/* =============================================================================
+   INLINE DRAWER (for ST Extensions settings panel)
+   ============================================================================= */
+#chorus-settings-drawer .inline-drawer-content {
+    font-family: var(--chorus-font-body);
+}
+
+#chorus-settings-drawer .inline-drawer-header b {
+    font-family: var(--chorus-font-heading);
+    letter-spacing: 1px;
+}
