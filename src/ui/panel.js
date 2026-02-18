@@ -3,11 +3,11 @@
  * Panel shell, FAB, draggable, tab switching, settings wiring.
  */
 
-import { renderExtensionTemplateAsync } from '../../../../../extensions.js';
-import { EXTENSION_NAME, LOG_PREFIX } from '../config.js';
-import { extensionSettings, getContainer, panelOpen, setPanelOpen } from '../state.js';
+import { renderExtensionTemplateAsync, getContext } from '../../../../../extensions.js';
+import { EXTENSION_NAME, LOG_PREFIX, TONE_ANCHORS } from '../config.js';
+import { extensionSettings, getContainer, panelOpen, setPanelOpen, saveSettings } from '../state.js';
 import { renderDeck, cleanupCanvases } from './deck.js';
-import { initReadingTab } from './reading.js';
+import { initReadingTab, clearSidebar } from './reading.js';
 
 // =============================================================================
 // PANEL TOGGLE
@@ -145,6 +145,43 @@ function setupDraggableFab() {
 }
 
 // =============================================================================
+// CONNECTION PROFILE POPULATION
+// =============================================================================
+
+function populateConnectionProfiles() {
+    const $select = $('#chorus-setting-connection');
+    $select.empty();
+
+    // Always have "Current Profile" option
+    $select.append('<option value="current">Current Profile</option>');
+
+    try {
+        const ctx = getContext();
+        const connectionManager = ctx.extensionSettings?.connectionManager;
+
+        if (connectionManager?.profiles?.length) {
+            for (const profile of connectionManager.profiles) {
+                if (profile.name && profile.id) {
+                    $select.append(`<option value="${profile.id}">${profile.name}</option>`);
+                }
+            }
+        }
+    } catch (e) {
+        console.warn(`${LOG_PREFIX} Could not load connection profiles:`, e);
+    }
+
+    // Set current value
+    const current = extensionSettings.connectionProfile || 'current';
+    $select.val(current);
+
+    // If the saved value doesn't exist in dropdown, fall back to current
+    if ($select.val() !== current) {
+        $select.val('current');
+        extensionSettings.connectionProfile = 'current';
+    }
+}
+
+// =============================================================================
 // UI INIT / DESTROY
 // =============================================================================
 
@@ -204,20 +241,68 @@ export async function initUI() {
         // Sliders
         $('#chorus-setting-max-voices').on('input', function () {
             $('#chorus-max-voices-val').text(this.value);
+            extensionSettings.maxVoices = parseInt(this.value);
+            saveSettings();
         });
         $('#chorus-setting-birth-sensitivity').on('input', function () {
             const labels = ['HAIR', 'LOW', 'MED', 'HIGH', 'EXTREME'];
             $('#chorus-birth-sensitivity-val').text(labels[this.value - 1]);
+            extensionSettings.birthSensitivity = parseInt(this.value);
+            saveSettings();
         });
         $('#chorus-setting-draw-freq').on('input', function () {
             $('#chorus-draw-freq-val').text(this.value);
+            extensionSettings.drawFrequency = parseInt(this.value);
+            saveSettings();
         });
         $('#chorus-setting-reversal-chance').on('input', function () {
             $('#chorus-reversal-chance-val').text(this.value + '%');
+            extensionSettings.reversalChance = parseInt(this.value);
+            saveSettings();
         });
         $('#chorus-setting-gain-rate').on('input', function () {
             const labels = ['SLOW', 'LOW', 'MED', 'FAST', 'RAPID'];
             $('#chorus-gain-rate-val').text(labels[this.value - 1]);
+            extensionSettings.influenceGainRate = parseInt(this.value);
+            saveSettings();
+        });
+
+        // ── Connection profile dropdown ──
+        populateConnectionProfiles();
+        $('#chorus-setting-connection').on('change', function () {
+            extensionSettings.connectionProfile = $(this).val();
+            saveSettings();
+            console.log(`${LOG_PREFIX} Connection profile: ${extensionSettings.connectionProfile}`);
+        });
+
+        // ── Tone anchor dropdown ──
+        $('#chorus-setting-tone').val(extensionSettings.toneAnchor || 'raw');
+        $('#chorus-setting-tone').on('change', function () {
+            extensionSettings.toneAnchor = $(this).val();
+            saveSettings();
+            console.log(`${LOG_PREFIX} Tone anchor: ${extensionSettings.toneAnchor}`);
+        });
+
+        // ── Draw mode picker ──
+        const $drawModePicker = $('#chorus-setting-draw-mode');
+        $drawModePicker.find('.chorus-picker__opt').removeClass('active');
+        $drawModePicker.find(`[data-value="${extensionSettings.drawMode || 'auto'}"]`).addClass('active');
+        $drawModePicker.find('.chorus-picker__opt').on('click', function () {
+            $(this).siblings().removeClass('active');
+            $(this).addClass('active');
+            extensionSettings.drawMode = $(this).data('value');
+            saveSettings();
+        });
+
+        // ── Narrator picker (persist) ──
+        const $narratorPicker = $('#chorus-setting-narrator');
+        $narratorPicker.find('.chorus-picker__opt').removeClass('active');
+        $narratorPicker.find(`[data-value="${extensionSettings.narratorPersona || 'sardonic'}"]`).addClass('active');
+        $narratorPicker.find('.chorus-picker__opt').on('click', function () {
+            $(this).siblings().removeClass('active');
+            $(this).addClass('active');
+            extensionSettings.narratorPersona = $(this).data('value');
+            saveSettings();
         });
 
         // Render tabs
@@ -251,8 +336,9 @@ export function refreshUI() {
     if (!$('#chorus-panel').length) return;
 
     renderDeck();
-    // Reading tab re-initializes its empty spread on render
-    // (full re-init not needed — just clear any stale reading)
+    clearSidebar();
+
+    // Clear spread area
     $('#chorus-spread-area').empty();
     $('#chorus-commentary-area').html(`
         <div class="chorus-commentary-empty" id="chorus-commentary-empty">
@@ -260,6 +346,9 @@ export function refreshUI() {
             <div class="chorus-commentary-empty__text">Draw a spread to hear from your voices</div>
         </div>
     `);
+
+    // Re-populate connection profiles (may have changed)
+    populateConnectionProfiles();
 
     console.log('[The Chorus] UI refreshed');
 }
