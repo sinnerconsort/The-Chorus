@@ -30,9 +30,17 @@ import {
     incrementMessageCounter,
     decayAllInfluence,
     decayAccumulators,
+    getEscalation,
 } from './src/state.js';
 import { initUI, destroyUI, refreshUI } from './src/ui/panel.js';
 import { processMessage } from './src/voices/voice-engine.js';
+import {
+    renderSidebarCommentary,
+    renderCardReading,
+    updateEscalationUI,
+    showSidebarLoading,
+    hideSidebarLoading,
+} from './src/ui/reading.js';
 
 // =============================================================================
 // SETTINGS PANEL (Extensions drawer)
@@ -104,47 +112,32 @@ async function onMessageReceived() {
     if (messageText.trim().length < 10) return;
 
     try {
+        // Show loading indicator
+        showSidebarLoading();
+
         // Run the full voice engine pipeline
         const result = await processMessage(messageText);
 
-        // Render results to UI
-        if (result.commentary.length > 0 || result.cardReading) {
-            renderEngineResults(result);
+        // Hide loading
+        hideSidebarLoading();
+
+        // Update escalation bar
+        updateEscalationUI(getEscalation());
+
+        // Render sidebar commentary
+        if (result.commentary.length > 0) {
+            renderSidebarCommentary(result.commentary);
+        }
+
+        // Render card reading (single card or spread)
+        if (result.cardReading) {
+            renderCardReading(result.cardReading);
         }
 
         console.log(`${LOG_PREFIX} Message processed: impact=${result.classification.impact}, ${result.commentary.length} voices spoke`);
     } catch (e) {
+        hideSidebarLoading();
         console.error(`${LOG_PREFIX} Voice engine error:`, e);
-    }
-}
-
-/**
- * Render voice engine results to the UI.
- * Updates sidebar commentary and reading tab.
- */
-function renderEngineResults(result) {
-    // TODO: Render sidebar commentary to the panel
-    // TODO: Render card reading to the reading tab
-    // For now, log results for debugging
-    if (result.commentary.length > 0) {
-        console.log(`${LOG_PREFIX} Commentary:`);
-        for (const entry of result.commentary) {
-            console.log(`  [${entry.name}]: ${entry.text}`);
-        }
-    }
-
-    if (result.cardReading) {
-        if (result.cardReading.type) {
-            // Multi-card spread
-            console.log(`${LOG_PREFIX} Spread (${result.cardReading.type}):`);
-            for (const card of result.cardReading.cards) {
-                console.log(`  [${card.positionName}] ${card.name}${card.reversed ? ' (R)' : ''}: ${card.text}`);
-            }
-        } else {
-            // Single card
-            const c = result.cardReading;
-            console.log(`${LOG_PREFIX} Card: [${c.name}]${c.reversed ? ' (R)' : ''}: ${c.text}`);
-        }
     }
 }
 

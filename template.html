@@ -47,6 +47,22 @@
         <!-- ============ READING TAB ============ -->
         <div class="chorus-page active" id="chorus-page-reading">
 
+            <!-- Sidebar Commentary (ambient voice reactions) -->
+            <div class="chorus-sidebar" id="chorus-sidebar">
+                <div class="chorus-sidebar__header">
+                    <span class="chorus-sidebar__title">VOICES</span>
+                    <span class="chorus-sidebar__count" id="chorus-sidebar-count"></span>
+                </div>
+                <div class="chorus-sidebar__feed" id="chorus-sidebar-feed">
+                    <div class="chorus-sidebar__empty" id="chorus-sidebar-empty">
+                        <div class="chorus-sidebar__empty-text">Voices will react as the story unfolds</div>
+                    </div>
+                    <!-- Sidebar commentary messages injected here -->
+                </div>
+            </div>
+
+            <div class="chorus-divider"></div>
+
             <!-- Escalation indicator -->
             <div class="chorus-escalation" id="chorus-escalation">
                 <div class="chorus-escalation__bar">
@@ -163,7 +179,26 @@
                             <div class="chorus-setting__desc">API profile for voice generation</div>
                         </div>
                         <select class="chorus-select" id="chorus-setting-connection">
-                            <option value="default">Default</option>
+                            <option value="current">Current Profile</option>
+                        </select>
+                    </div>
+
+                    <div class="chorus-setting">
+                        <div>
+                            <div class="chorus-setting__label">TONE</div>
+                            <div class="chorus-setting__desc">Flavor of voice personality</div>
+                        </div>
+                        <select class="chorus-select" id="chorus-setting-tone">
+                            <option value="gothic">Gothic</option>
+                            <option value="raw" selected>Raw</option>
+                            <option value="clinical">Clinical</option>
+                            <option value="surreal">Surreal</option>
+                            <option value="baroque">Baroque</option>
+                            <option value="noir">Noir</option>
+                            <option value="feral">Feral</option>
+                            <option value="sardonic">Sardonic</option>
+                            <option value="mythic">Mythic</option>
+                            <option value="tender">Tender</option>
                         </select>
                     </div>
 
@@ -228,11 +263,12 @@
 
                     <div class="chorus-setting">
                         <div>
-                            <div class="chorus-setting__label">AUTO-DRAW</div>
-                            <div class="chorus-setting__desc">Automatically redraw spread</div>
+                            <div class="chorus-setting__label">DRAW MODE</div>
+                            <div class="chorus-setting__desc">When to draw cards automatically</div>
                         </div>
-                        <div class="chorus-toggle on" id="chorus-setting-auto-draw">
-                            <div class="chorus-toggle__dot"></div>
+                        <div class="chorus-picker" id="chorus-setting-draw-mode">
+                            <button class="chorus-picker__opt active" data-value="auto">AUTO</button>
+                            <button class="chorus-picker__opt" data-value="manual">MANUAL</button>
                         </div>
                     </div>
 
