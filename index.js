@@ -23,7 +23,7 @@ import {
 // =============================================================================
 // CONSTANTS
 // =============================================================================
-const EXTENSION_NAME = 'the-chorus';
+const EXTENSION_NAME = 'third-party/The-Chorus';
 const LOG_PREFIX = '[The Chorus]';
 
 // =============================================================================
@@ -87,6 +87,7 @@ function saveSettings() {
 async function initUI() {
     try {
         // Load main panel template
+        toastr.info(`Loading template from: ${EXTENSION_NAME}`, 'The Chorus', { timeOut: 5000 });
         const panelHtml = await renderExtensionTemplateAsync(EXTENSION_NAME, 'template');
         $('body').append(panelHtml);
 
@@ -225,12 +226,14 @@ function onMessageReceived() {
 jQuery(async () => {
     try {
         console.log(`${LOG_PREFIX} Initializing...`);
+        toastr.info('Starting...', 'The Chorus', { timeOut: 3000 });
 
         // 1. Load settings
         try {
             loadSettings();
         } catch (error) {
             console.error(`${LOG_PREFIX} Settings load failed:`, error);
+            toastr.warning('Settings load failed', 'The Chorus');
         }
 
         // 2. Add settings to Extensions panel
@@ -238,21 +241,25 @@ jQuery(async () => {
             await addExtensionSettings();
         } catch (error) {
             console.error(`${LOG_PREFIX} Settings panel failed:`, error);
+            toastr.warning('Settings panel failed', 'The Chorus');
         }
 
         // 3. Check enabled
         if (!extensionSettings.enabled) {
             console.log(`${LOG_PREFIX} Extension disabled`);
+            toastr.info('Extension disabled', 'The Chorus');
             return;
         }
 
         // 4. Initialize UI
         await initUI();
+        toastr.success('UI loaded', 'The Chorus', { timeOut: 3000 });
 
         // 5. Register events
         registerEvents();
 
         console.log(`${LOG_PREFIX} ✅ Loaded successfully`);
+        toastr.success('✅ Ready', 'The Chorus', { timeOut: 3000 });
 
     } catch (error) {
         console.error(`${LOG_PREFIX} ❌ Critical failure:`, error);
