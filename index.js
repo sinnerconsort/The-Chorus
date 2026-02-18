@@ -10,6 +10,7 @@
 import {
     renderExtensionTemplateAsync,
     extension_settings,
+    getContext,
 } from '../../../extensions.js';
 
 import {
@@ -31,6 +32,7 @@ import {
     decayAccumulators,
 } from './src/state.js';
 import { initUI, destroyUI, refreshUI } from './src/ui/panel.js';
+import { processMessage } from './src/voices/voice-engine.js';
 
 // =============================================================================
 // SETTINGS PANEL (Extensions drawer)
@@ -77,8 +79,9 @@ function onChatChanged() {
     console.log(`${LOG_PREFIX} Chat changed — state ${hasActiveChat() ? 'loaded' : 'cleared'}`);
 }
 
-function onMessageReceived() {
+async function onMessageReceived() {
     if (!hasActiveChat()) return;
+    if (!extensionSettings.enabled) return;
 
     // Increment draw counter
     const count = incrementMessageCounter();
@@ -91,11 +94,58 @@ function onMessageReceived() {
     // Decay accumulators slightly (natural cooldown)
     decayAccumulators(2);
 
-    // TODO: Run detection scanners on new message
-    // TODO: Check if draw should trigger (count >= drawFrequency)
-    // TODO: Check hijack thresholds
+    // Get the last message text
+    const ctx = getContext();
+    const chat = ctx.chat || [];
+    const lastMsg = chat[chat.length - 1];
+    if (!lastMsg || lastMsg.is_user) return; // Only process AI messages
 
-    console.log(`${LOG_PREFIX} Message received (${count} since last draw)`);
+    const messageText = lastMsg.mes || '';
+    if (messageText.trim().length < 10) return;
+
+    try {
+        // Run the full voice engine pipeline
+        const result = await processMessage(messageText);
+
+        // Render results to UI
+        if (result.commentary.length > 0 || result.cardReading) {
+            renderEngineResults(result);
+        }
+
+        console.log(`${LOG_PREFIX} Message processed: impact=${result.classification.impact}, ${result.commentary.length} voices spoke`);
+    } catch (e) {
+        console.error(`${LOG_PREFIX} Voice engine error:`, e);
+    }
+}
+
+/**
+ * Render voice engine results to the UI.
+ * Updates sidebar commentary and reading tab.
+ */
+function renderEngineResults(result) {
+    // TODO: Render sidebar commentary to the panel
+    // TODO: Render card reading to the reading tab
+    // For now, log results for debugging
+    if (result.commentary.length > 0) {
+        console.log(`${LOG_PREFIX} Commentary:`);
+        for (const entry of result.commentary) {
+            console.log(`  [${entry.name}]: ${entry.text}`);
+        }
+    }
+
+    if (result.cardReading) {
+        if (result.cardReading.type) {
+            // Multi-card spread
+            console.log(`${LOG_PREFIX} Spread (${result.cardReading.type}):`);
+            for (const card of result.cardReading.cards) {
+                console.log(`  [${card.positionName}] ${card.name}${card.reversed ? ' (R)' : ''}: ${card.text}`);
+            }
+        } else {
+            // Single card
+            const c = result.cardReading;
+            console.log(`${LOG_PREFIX} Card: [${c.name}]${c.reversed ? ' (R)' : ''}: ${c.text}`);
+        }
+    }
 }
 
 // =============================================================================
