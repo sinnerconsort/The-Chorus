@@ -918,7 +918,11 @@ async function initUI() {
         $temp.children().appendTo($container);
 
         // Create FAB with absolute positioning (bypasses transform issues)
-        const $fab = $('<button id="chorus-fab" class="chorus-fab" title="The Chorus">◆</button>');
+        const $fab = $(`<button id="chorus-fab" class="chorus-fab" title="The Chorus">
+            <span class="chorus-fab__glyph">◆</span>
+            <div class="chorus-fab__ink"></div>
+            <div class="chorus-fab__pip"></div>
+        </button>`);
         $fab.css({
             'position': 'absolute',
             'z-index': '99999',
