@@ -17,6 +17,7 @@ export const DEFAULT_SETTINGS = {
     // Voice engine
     connectionProfile: 'default',
     narratorPersona: 'sardonic',
+    toneAnchor: 'raw',
 
     // Deck
     maxVoices: 7,
@@ -24,9 +25,9 @@ export const DEFAULT_SETTINGS = {
     birthSensitivity: 3,
 
     // Readings
-    autoDraw: true,
-    drawFrequency: 3,
-    defaultSpread: 'three',
+    drawMode: 'auto',          // 'auto' | 'manual'
+    drawFrequency: 1,          // every N messages (auto mode)
+    spreadTrigger: 'auto',     // 'auto' (on severity) | 'manual'
     reversalChance: 15,
 
     // Influence
@@ -36,6 +37,141 @@ export const DEFAULT_SETTINGS = {
     // Hijack
     hijackEnabled: false,
     hijackMaxTier: 1,
+};
+
+// =============================================================================
+// TONE ANCHORS
+// =============================================================================
+
+export const TONE_ANCHORS = {
+    gothic:   { name: 'Gothic',   description: 'Literary, dramatic, poetic. Emotions are landscapes. Everything is beautiful and terrible.' },
+    raw:      { name: 'Raw',      description: 'Conversational, profane, blunt. No metaphors. Real people at 3am.' },
+    clinical: { name: 'Clinical', description: 'Analytical, detached, precise. Dissects rather than feels. Uncomfortable accuracy.' },
+    surreal:  { name: 'Surreal',  description: 'Dreamlike, associative, weird. Dream logic. Images over arguments.' },
+    baroque:  { name: 'Baroque',  description: 'Purple prose, theatrical, Shakespearean. Every sentence is a soliloquy.' },
+    noir:     { name: 'Noir',     description: 'Hardboiled, cynical, street-level metaphors. Everything is a crime scene.' },
+    feral:    { name: 'Feral',    description: 'Primal, instinctive, barely verbal. Gut feeling and body memory.' },
+    sardonic: { name: 'Sardonic', description: 'Dry wit, gallows humor. Everything is a defense mechanism shaped like a joke.' },
+    mythic:   { name: 'Mythic',   description: 'Parable, archetype, prophecy. Ancient voice that has seen this story before.' },
+    tender:   { name: 'Tender',   description: 'Gentle, intimate, soft-spoken. Sits with you rather than lectures.' },
+};
+
+// =============================================================================
+// THEME TAXONOMY
+// =============================================================================
+// Fixed list the classifier tags messages with.
+// Voice birth picks triggers FROM this list.
+// Matching is mechanical: classifier output ∩ voice triggers.
+
+export const THEMES = {
+    emotional: [
+        'heartbreak', 'rage', 'euphoria', 'grief', 'love', 'terror',
+        'shame', 'triumph', 'jealousy', 'loneliness', 'guilt', 'pride',
+    ],
+    relational: [
+        'betrayal', 'intimacy', 'rejection', 'connection', 'deception',
+        'trust', 'abandonment', 'devotion', 'manipulation', 'forgiveness',
+    ],
+    physical: [
+        'violence', 'near_death', 'injury', 'intoxication', 'desire',
+        'adrenaline', 'exhaustion', 'comfort', 'hunger', 'pain',
+    ],
+    identity: [
+        'revelation', 'transformation', 'loss_of_purpose', 'self_discovery',
+        'humiliation', 'empowerment', 'submission', 'defiance', 'doubt', 'resolve',
+    ],
+};
+
+// Flattened for validation
+export const ALL_THEMES = [
+    ...THEMES.emotional,
+    ...THEMES.relational,
+    ...THEMES.physical,
+    ...THEMES.identity,
+];
+
+// =============================================================================
+// IMPACT LEVELS
+// =============================================================================
+
+export const IMPACT_LEVELS = ['none', 'minor', 'significant', 'critical'];
+
+// =============================================================================
+// SPREAD POSITIONS
+// =============================================================================
+
+export const SPREAD_POSITIONS = {
+    single: {
+        present: {
+            name: 'The Present',
+            framing: 'React to what just happened. Speak from your nature.',
+        },
+    },
+    three: {
+        situation: {
+            name: 'Situation',
+            framing: 'Describe what is really happening here, beneath the surface.',
+        },
+        advice: {
+            name: 'Advice',
+            framing: 'What should {{user}} do? Speak from your experience.',
+        },
+        outcome: {
+            name: 'Outcome',
+            framing: 'Where does this lead if things continue? Predict.',
+        },
+    },
+    cross: {
+        heart: {
+            name: 'Heart',
+            framing: 'What is this moment really about? Cut to the core.',
+        },
+        crossing: {
+            name: 'Crossing',
+            framing: 'What stands in the way? What is the obstacle?',
+        },
+        foundation: {
+            name: 'Foundation',
+            framing: 'What brought us here? What is the history?',
+        },
+        crown: {
+            name: 'Crown',
+            framing: 'What does {{user}} want? What are they reaching for?',
+        },
+        outcome: {
+            name: 'Outcome',
+            framing: 'Where does this end? What is coming?',
+        },
+    },
+};
+
+// =============================================================================
+// RELATIONSHIP MODIFIERS (for participation roll)
+// =============================================================================
+
+export const RELATIONSHIP_CHAT_MODIFIERS = {
+    devoted: 0.05,
+    protective: 0.05,
+    warm: 0.0,
+    curious: 0.0,
+    indifferent: -0.20,
+    resentful: 0.05,
+    hostile: 0.10,
+    obsessed: 0.15,
+    grieving: -0.10,
+    manic: 0.20,
+};
+
+// =============================================================================
+// CHATTINESS BASE RATES
+// =============================================================================
+
+export const CHATTINESS_BASE = {
+    1: 0.10,
+    2: 0.25,
+    3: 0.40,
+    4: 0.60,
+    5: 0.80,
 };
 
 // =============================================================================
