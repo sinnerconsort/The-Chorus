@@ -241,3 +241,25 @@ export function destroyUI() {
     $('#chorus-dissolution-overlay').remove();
     setPanelOpen(false);
 }
+
+/**
+ * Re-render all tab content with current state.
+ * Called on chat switch after loadChatState().
+ */
+export function refreshUI() {
+    // Only refresh if UI is actually mounted
+    if (!$('#chorus-panel').length) return;
+
+    renderDeck();
+    // Reading tab re-initializes its empty spread on render
+    // (full re-init not needed — just clear any stale reading)
+    $('#chorus-spread-area').empty();
+    $('#chorus-commentary-area').html(`
+        <div class="chorus-commentary-empty" id="chorus-commentary-empty">
+            <div class="chorus-commentary-empty__glyph">\u263E</div>
+            <div class="chorus-commentary-empty__text">Draw a spread to hear from your voices</div>
+        </div>
+    `);
+
+    console.log('[The Chorus] UI refreshed');
+}
