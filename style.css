@@ -2219,6 +2219,23 @@
     background: rgba(201, 168, 76, 0.08);
 }
 
+.chorus-sidebar-msg--narrator {
+    border-left-color: #c9a84c;
+    background: rgba(201, 168, 76, 0.04);
+    border-left-width: 2px;
+    font-style: italic;
+}
+
+.chorus-sidebar-msg--narrator .chorus-sidebar-msg__glyph {
+    border-color: #c9a84c33 !important;
+    color: #c9a84c !important;
+}
+
+.chorus-sidebar-msg--narrator .chorus-sidebar-msg__text {
+    color: #c9a84ccc;
+    font-style: italic;
+}
+
 .chorus-sidebar-msg__glyph {
     flex-shrink: 0;
     width: 24px;

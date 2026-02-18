@@ -147,6 +147,18 @@ async function onMessageReceived() {
             refreshUI();
         }
 
+        // Render narrator (before voice commentary — narrator frames, voices react)
+        if (result.narrator) {
+            renderSidebarCommentary([{
+                voiceId: '_narrator',
+                name: 'Narrator',
+                arcana: 'world',  // Use world arcana glyph for narrator
+                relationship: 'narrator',
+                text: result.narrator,
+                isNarrator: true,
+            }]);
+        }
+
         // Render sidebar commentary
         if (result.commentary.length > 0) {
             renderSidebarCommentary(result.commentary);
