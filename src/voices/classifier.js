@@ -12,6 +12,10 @@
 import { getContext } from '../../../../../extensions.js';
 import { ALL_THEMES, IMPACT_LEVELS, LOG_PREFIX, THEMES } from '../config.js';
 import { extensionSettings } from '../state.js';
+import {
+    getResolutionAssessmentBlock,
+    formatAssessmentPrompt,
+} from './voice-lifecycle.js';
 
 // =============================================================================
 // CLASSIFIER PROMPT
@@ -24,6 +28,13 @@ function buildClassifierPrompt(messageText) {
         `PHYSICAL: ${THEMES.physical.join(', ')}`,
         `IDENTITY: ${THEMES.identity.join(', ')}`,
     ].join('\n');
+
+    // Check for resolution candidates (appended to same call — cheap)
+    const resolutionCandidates = getResolutionAssessmentBlock();
+    const resolutionPrompt = formatAssessmentPrompt(resolutionCandidates);
+    const resolutionJsonHint = resolutionCandidates
+        ? ',\n  "resolution_progress": [{ "voiceId": "id", "progress": 0 }]'
+        : '';
 
     return [
         {
@@ -53,8 +64,8 @@ Return JSON:
 {
   "impact": "none|minor|significant|critical",
   "themes": ["theme1", "theme2"],
-  "summary": "One sentence describing what shifted (only if significant or critical, otherwise empty string)"
-}`,
+  "summary": "One sentence describing what shifted (only if significant or critical, otherwise empty string)"${resolutionJsonHint}
+}${resolutionPrompt}`,
         },
     ];
 }
@@ -67,7 +78,7 @@ Return JSON:
  * Parse classifier response, with defensive fallbacks.
  */
 function parseClassifierResponse(responseText) {
-    const fallback = { impact: 'none', themes: [], summary: '' };
+    const fallback = { impact: 'none', themes: [], summary: '', resolutionProgress: [] };
 
     if (!responseText || typeof responseText !== 'string') {
         return fallback;
@@ -100,7 +111,17 @@ function parseClassifierResponse(responseText) {
         // Validate summary
         const summary = typeof parsed.summary === 'string' ? parsed.summary : '';
 
-        return { impact, themes, summary };
+        // Parse resolution progress (optional)
+        const resolutionProgress = Array.isArray(parsed.resolution_progress)
+            ? parsed.resolution_progress
+                .filter(r => r && r.voiceId && typeof r.progress === 'number')
+                .map(r => ({
+                    voiceId: r.voiceId,
+                    progress: Math.max(0, Math.min(10, Math.round(r.progress))),
+                }))
+            : [];
+
+        return { impact, themes, summary, resolutionProgress };
     } catch (e) {
         console.warn(`${LOG_PREFIX} Classifier parse failed:`, e.message);
         return fallback;

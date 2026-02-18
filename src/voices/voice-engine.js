@@ -12,7 +12,7 @@
 import { getContext } from '../../../../../extensions.js';
 import {
     ALL_THEMES, THEMES, TONE_ANCHORS, SPREAD_POSITIONS,
-    LOG_PREFIX,
+    LOG_PREFIX, IMPACT_TO_DEPTH,
 } from '../config.js';
 import {
     extensionSettings,
@@ -33,6 +33,8 @@ import {
     selectForSpread,
     calculateInfluenceDeltas,
 } from './participation.js';
+import { birthVoiceFromEvent, birthVoiceFromPersona } from './voice-birth.js';
+import { processLifecycle, completeTransformation } from './voice-lifecycle.js';
 
 // =============================================================================
 // PROFILE RESOLUTION (shared with classifier)
@@ -452,23 +454,29 @@ export async function generateSpread(spreadType, themes = [], eventSummary = '')
 // ORCHESTRATOR — Per-Message Flow
 // =============================================================================
 
+// Birth cooldown — prevent rapid-fire births
+let lastBirthTime = 0;
+const BIRTH_COOLDOWN_MS = 30000; // 30 seconds between births
+
 /**
  * Main per-message processing pipeline.
  * Called from index.js onMessageReceived.
  *
  * @param {string} messageText - The incoming message text
- * @returns {Object} { classification, commentary[], cardReading }
+ * @returns {Object} { classification, commentary[], cardReading, lifecycleEvents[], newVoice }
  */
 export async function processMessage(messageText) {
     const result = {
-        classification: { impact: 'none', themes: [], summary: '' },
+        classification: { impact: 'none', themes: [], summary: '', resolutionProgress: [] },
         commentary: [],
         cardReading: null,
+        lifecycleEvents: [],
+        newVoice: null,
     };
 
-    // ─── Step 1: Classify ───
+    // ─── Step 1: Classify (includes resolution assessment) ───
     result.classification = await classifyMessage(messageText);
-    const { impact, themes, summary } = result.classification;
+    const { impact, themes, summary, resolutionProgress } = result.classification;
 
     // ─── Step 2: Update influence from themes ───
     const deltas = calculateInfluenceDeltas(themes, extensionSettings.influenceGainRate || 3);
@@ -479,13 +487,89 @@ export async function processMessage(messageText) {
     // ─── Step 3: Update escalation from impact ───
     updateEscalation(impact);
 
-    // ─── Step 4: Sidebar commentary ───
+    // ─── Step 4: Process lifecycle (resolution, fading, transformation) ───
+    result.lifecycleEvents = processLifecycle(result.classification, resolutionProgress);
+
+    // Handle any transformations that completed
+    for (const event of result.lifecycleEvents) {
+        if (event.type === 'transforming' && event.transformData) {
+            const newVoice = await completeTransformation(event.transformData);
+            if (newVoice) {
+                event.newVoice = newVoice;
+                result.newVoice = newVoice;
+            }
+        }
+    }
+
+    // ─── Step 5: Birth check ───
+    if (!result.newVoice) {
+        result.newVoice = await checkBirth(impact, themes, summary, messageText);
+    }
+
+    // ─── Step 6: Sidebar commentary ───
     result.commentary = await generateSidebarCommentary(themes);
 
-    // ─── Step 5: Card pull / spread (conditional) ───
+    // ─── Step 7: Card pull / spread (conditional) ───
     result.cardReading = await handleCardDraw(impact, themes, summary);
 
     return result;
+}
+
+/**
+ * Check if a new voice should be born from this message.
+ */
+async function checkBirth(impact, themes, summary, messageText) {
+    // Only birth on significant+ impact
+    if (impact !== 'significant' && impact !== 'critical') return null;
+
+    // Cooldown check
+    if (Date.now() - lastBirthTime < BIRTH_COOLDOWN_MS) return null;
+
+    // Deck space check
+    const living = getLivingVoices();
+    if (living.length >= (extensionSettings.maxVoices || 7)) {
+        // If autoEgoDeath is enabled, we could force a sacrifice here
+        // For now, just block
+        return null;
+    }
+
+    // Birth sensitivity check — higher sensitivity = more births
+    // 1=HAIR (always), 2=LOW (significant+), 3=MED (significant w/ strong themes),
+    // 4=HIGH (critical only), 5=EXTREME (critical + rare)
+    const sensitivity = extensionSettings.birthSensitivity || 3;
+    if (sensitivity >= 4 && impact !== 'critical') return null;
+    if (sensitivity >= 3 && impact === 'significant' && themes.length < 2) return null;
+
+    // Use summary as trigger, fall back to message excerpt
+    const trigger = summary || messageText.substring(0, 300);
+
+    try {
+        const voice = await birthVoiceFromEvent(trigger, impact, themes);
+        if (voice) {
+            lastBirthTime = Date.now();
+        }
+        return voice;
+    } catch (e) {
+        console.error(`${LOG_PREFIX} Birth check failed:`, e);
+        return null;
+    }
+}
+
+/**
+ * Initialize the first voice from persona card.
+ * Called once on first message in a new chat.
+ */
+export async function initializeFirstVoice() {
+    const living = getLivingVoices();
+    if (living.length > 0) return null; // Already have voices
+
+    try {
+        const voice = await birthVoiceFromPersona();
+        return voice;
+    } catch (e) {
+        console.error(`${LOG_PREFIX} First voice birth failed:`, e);
+        return null;
+    }
 }
 
 /**
