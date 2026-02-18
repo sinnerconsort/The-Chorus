@@ -31,9 +31,10 @@ import {
     decayAllInfluence,
     decayAccumulators,
     getEscalation,
+    getLivingVoices,
 } from './src/state.js';
 import { initUI, destroyUI, refreshUI } from './src/ui/panel.js';
-import { processMessage } from './src/voices/voice-engine.js';
+import { processMessage, initializeFirstVoice } from './src/voices/voice-engine.js';
 import {
     renderSidebarCommentary,
     renderCardReading,
@@ -112,6 +113,19 @@ async function onMessageReceived() {
     if (messageText.trim().length < 10) return;
 
     try {
+        // First voice from persona (if no voices exist yet)
+        const living = getLivingVoices();
+        if (living.length === 0) {
+            showSidebarLoading();
+            const firstVoice = await initializeFirstVoice();
+            hideSidebarLoading();
+
+            if (firstVoice) {
+                toastr.info(`${firstVoice.name} awakens`, 'Voice Born', { timeOut: 3000 });
+                refreshUI();
+            }
+        }
+
         // Show loading indicator
         showSidebarLoading();
 
@@ -124,6 +138,15 @@ async function onMessageReceived() {
         // Update escalation bar
         updateEscalationUI(getEscalation());
 
+        // Handle lifecycle events
+        handleLifecycleEvents(result.lifecycleEvents);
+
+        // Handle new voice birth
+        if (result.newVoice) {
+            toastr.info(`${result.newVoice.name} awakens (${result.newVoice.depth})`, 'Voice Born', { timeOut: 4000 });
+            refreshUI();
+        }
+
         // Render sidebar commentary
         if (result.commentary.length > 0) {
             renderSidebarCommentary(result.commentary);
@@ -134,10 +157,46 @@ async function onMessageReceived() {
             renderCardReading(result.cardReading);
         }
 
-        console.log(`${LOG_PREFIX} Message processed: impact=${result.classification.impact}, ${result.commentary.length} voices spoke`);
+        console.log(`${LOG_PREFIX} Message processed: impact=${result.classification.impact}, ${result.commentary.length} voices, ${result.lifecycleEvents.length} lifecycle events`);
     } catch (e) {
         hideSidebarLoading();
         console.error(`${LOG_PREFIX} Voice engine error:`, e);
+    }
+}
+
+/**
+ * Handle lifecycle events (resolutions, transformations, state changes).
+ */
+function handleLifecycleEvents(events) {
+    if (!events || events.length === 0) return;
+
+    for (const event of events) {
+        switch (event.type) {
+            case 'resolved':
+                toastr.info(event.message, 'Voice Resolved', { timeOut: 5000 });
+                refreshUI();
+                break;
+
+            case 'transforming':
+                toastr.warning(event.message, 'Transformation', { timeOut: 6000 });
+                if (event.newVoice) {
+                    setTimeout(() => {
+                        toastr.info(`${event.newVoice.name} crystallizes from the fragments`, 'Voice Reborn', { timeOut: 5000 });
+                        refreshUI();
+                    }, 2000);
+                }
+                break;
+
+            case 'fade_death':
+                toastr.info(event.message, 'Voice Faded', { timeOut: 3000 });
+                refreshUI();
+                break;
+
+            case 'state_change':
+                console.log(`${LOG_PREFIX} ${event.name}: ${event.newState}`);
+                // Subtle — no toastr, just log. The user sees it in the voice's behavior.
+                break;
+        }
     }
 }
 
