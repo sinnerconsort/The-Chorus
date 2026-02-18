@@ -175,6 +175,115 @@ export const CHATTINESS_BASE = {
 };
 
 // =============================================================================
+// VOICE DEPTH
+// =============================================================================
+// Born from classifier impact level. Determines permanence, decay, resolution.
+
+export const VOICE_DEPTH = {
+    surface: {
+        name: 'Surface',
+        description: 'Fleeting reaction. Loud at first, resolves quickly.',
+        defaultInfluence: 40,
+        naturalDecayRate: 2,       // Loses 2 influence per message even without setting
+        resolutionTypes: ['fade', 'confront'],
+        chattinessRange: [3, 5],   // Born chatty
+        maxLifespan: null,         // No hard cap, but fade handles it
+    },
+    rooted: {
+        name: 'Rooted',
+        description: 'Real emotional weight. Sticks around. Needs active resolution.',
+        defaultInfluence: 30,
+        naturalDecayRate: 0,       // Doesn't decay naturally
+        resolutionTypes: ['heal', 'transform', 'confront', 'witness'],
+        chattinessRange: [2, 4],
+        maxLifespan: null,
+    },
+    core: {
+        name: 'Core',
+        description: 'Identity-defining. Load-bearing wall of the psyche.',
+        defaultInfluence: 20,
+        naturalDecayRate: 0,
+        resolutionTypes: ['endure'],  // Only ego death removes these
+        chattinessRange: [1, 3],      // Speaks rarely but hits hard
+        maxLifespan: null,
+    },
+};
+
+// Maps classifier impact → voice depth
+export const IMPACT_TO_DEPTH = {
+    minor: 'surface',
+    significant: 'rooted',
+    critical: 'core',
+};
+
+// =============================================================================
+// RESOLUTION TYPES
+// =============================================================================
+
+export const RESOLUTION_TYPES = {
+    fade: {
+        name: 'Fade',
+        description: 'Needs time. Voice quiets as triggering themes stop appearing.',
+        depthAllowed: ['surface'],
+        progressPerMessage: 3,     // Auto-progress when triggers absent
+        regressPerTrigger: 8,      // Regresses when triggers fire
+        threshold: 60,
+    },
+    heal: {
+        name: 'Heal',
+        description: 'Needs specific story conditions. AI assesses contextually.',
+        depthAllowed: ['rooted'],
+        progressPerMessage: 0,     // No auto-progress
+        regressPerTrigger: 0,
+        threshold: 70,
+    },
+    transform: {
+        name: 'Transform',
+        description: 'Becomes a new voice. Death of the old, birth of the new.',
+        depthAllowed: ['rooted', 'surface'],
+        progressPerMessage: 0,
+        regressPerTrigger: 0,
+        threshold: 50,
+    },
+    confront: {
+        name: 'Confront',
+        description: 'Must be addressed in 1-on-1 directory. Voice holds the key.',
+        depthAllowed: ['surface', 'rooted'],
+        progressPerMessage: 0,
+        regressPerTrigger: 0,
+        threshold: 80,
+    },
+    witness: {
+        name: 'Witness',
+        description: 'Needs to see something happen in the story.',
+        depthAllowed: ['rooted'],
+        progressPerMessage: 0,
+        regressPerTrigger: 0,
+        threshold: 60,
+    },
+    endure: {
+        name: 'Endure',
+        description: 'No resolution. Only ego death removes this voice.',
+        depthAllowed: ['core'],
+        progressPerMessage: 0,
+        regressPerTrigger: 0,
+        threshold: null,  // Can never be reached normally
+    },
+};
+
+// =============================================================================
+// METAPHOR DOMAINS (for voice birth prompt)
+// =============================================================================
+
+export const METAPHOR_DOMAINS = [
+    'architecture', 'weather', 'cooking', 'surgery', 'chess', 'tides',
+    'insects', 'clockwork', 'accounting', 'theater', 'cartography',
+    'gardening', 'music theory', 'forensics', 'animal behavior',
+    'astronomy', 'needlework', 'geology', 'photography', 'plumbing',
+    'beekeeping', 'archaeology', 'navigation', 'glassblowing', 'taxidermy',
+];
+
+// =============================================================================
 // ARCANA DEFINITIONS
 // =============================================================================
 

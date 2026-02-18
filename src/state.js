@@ -297,6 +297,28 @@ function sanitizeVoice(voice) {
         directoryHistory: [],
         created: Date.now(),
         lastSpoke: null,
+
+        // Voice engine fields
+        obsession: '',
+        opinion: '',
+        blindSpot: '',
+        selfAwareness: '',
+        metaphorDomain: 'general',
+        verbalTic: '',
+        chattiness: 3,
+        lastCommentary: '',
+        silentStreak: 0,
+
+        // Depth & lifecycle
+        depth: 'rooted',           // 'surface' | 'rooted' | 'core'
+        resolution: {
+            type: 'endure',
+            condition: '',         // Natural language (hidden from user)
+            progress: 0,           // 0-100
+            threshold: null,       // Target to resolve (null = unresolvable)
+            transformsInto: null,  // For transform type: { hint, suggestedArcana, depth }
+        },
+        resolvedAt: null,          // Timestamp if resolved/transformed
     };
 
     const sanitized = { ...defaults, ...voice };
@@ -305,7 +327,8 @@ function sanitizeVoice(voice) {
     sanitized.influence = Math.max(0, Math.min(100, sanitized.influence || 0));
 
     // Validate state
-    const validStates = ['dormant', 'active', 'agitated', 'hijacking', 'dead'];
+    const validStates = ['dormant', 'active', 'agitated', 'hijacking', 'dead',
+        'fading', 'resolving', 'transforming'];
     if (!validStates.includes(sanitized.state)) {
         sanitized.state = 'dormant';
     }
@@ -319,12 +342,24 @@ function sanitizeVoice(voice) {
         sanitized.relationship = 'curious';
     }
 
+    // Validate depth
+    const validDepths = ['surface', 'rooted', 'core'];
+    if (!validDepths.includes(sanitized.depth)) {
+        sanitized.depth = 'rooted';
+    }
+
     // Ensure triggers structure
     if (!sanitized.influenceTriggers || typeof sanitized.influenceTriggers !== 'object') {
         sanitized.influenceTriggers = { raises: [], lowers: [] };
     }
     if (!Array.isArray(sanitized.influenceTriggers.raises)) sanitized.influenceTriggers.raises = [];
     if (!Array.isArray(sanitized.influenceTriggers.lowers)) sanitized.influenceTriggers.lowers = [];
+
+    // Ensure resolution structure
+    if (!sanitized.resolution || typeof sanitized.resolution !== 'object') {
+        sanitized.resolution = { type: 'endure', condition: '', progress: 0, threshold: null, transformsInto: null };
+    }
+    sanitized.resolution.progress = Math.max(0, Math.min(100, sanitized.resolution.progress || 0));
 
     // Ensure history array
     if (!Array.isArray(sanitized.directoryHistory)) sanitized.directoryHistory = [];
@@ -541,6 +576,80 @@ export function removeDeadVoice(voiceId) {
     chatState.voices.splice(idx, 1);
     saveChatState();
     return true;
+}
+
+/**
+ * Resolve a voice (natural end — fading, healing, confronting).
+ * Different from kill (ego death) — this is peaceful completion.
+ */
+export function resolveVoice(voiceId, reason = 'resolved') {
+    if (!chatState) return false;
+
+    const voice = getVoiceById(voiceId);
+    if (!voice || voice.state === 'dead') return false;
+
+    voice.state = 'dead';
+    voice.influence = 0;
+    voice.resolvedAt = Date.now();
+
+    // Log as death but with resolution context
+    chatState.deathLog.push({
+        voiceId: voice.id,
+        name: voice.name,
+        arcana: voice.arcana,
+        relationship: voice.relationship,
+        influence: voice.influence,
+        reason,
+        resolutionType: voice.resolution?.type || 'unknown',
+        timestamp: Date.now(),
+    });
+
+    saveChatState();
+    console.log(`${LOG_PREFIX} Voice resolved (${reason}): ${voice.name}`);
+    return true;
+}
+
+/**
+ * Transform a voice — kill the old, return data needed to birth the new.
+ * Returns the old voice's transformsInto data, or null.
+ */
+export function transformVoice(voiceId) {
+    if (!chatState) return null;
+
+    const voice = getVoiceById(voiceId);
+    if (!voice || voice.state === 'dead') return null;
+
+    const transformData = voice.resolution?.transformsInto;
+    if (!transformData) return null;
+
+    // Kill the old voice
+    voice.state = 'dead';
+    voice.influence = 0;
+    voice.resolvedAt = Date.now();
+
+    // Log transformation
+    chatState.deathLog.push({
+        voiceId: voice.id,
+        name: voice.name,
+        arcana: voice.arcana,
+        relationship: voice.relationship,
+        influence: voice.influence,
+        reason: 'transformed',
+        resolutionType: 'transform',
+        transformHint: transformData.hint,
+        timestamp: Date.now(),
+    });
+
+    saveChatState();
+    console.log(`${LOG_PREFIX} Voice transforming: ${voice.name} → "${transformData.hint}"`);
+
+    return {
+        oldVoice: voice,
+        hint: transformData.hint,
+        suggestedArcana: transformData.suggestedArcana,
+        depth: transformData.depth || 'rooted',
+        birthMoment: voice.birthMoment, // Carries memory
+    };
 }
 
 /**
