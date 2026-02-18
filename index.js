@@ -2,8 +2,9 @@
  * THE CHORUS — SillyTavern Extension
  * Internal voices born from extreme moments, accumulated as tarot cards.
  *
- * Entry point. Handles initialization, settings, event registration,
- * and UI panel lifecycle.
+ * NOTE: position:fixed breaks on mobile when ancestor elements have
+ * CSS transforms (e.g. Moonlit Echoes theme). FAB and panel use
+ * position:absolute on #sheld instead.
  */
 
 import {
@@ -40,19 +41,19 @@ const DEFAULT_SETTINGS = {
     // Deck
     maxVoices: 7,
     autoEgoDeath: true,
-    birthSensitivity: 3, // 1-5
+    birthSensitivity: 3,
 
     // Readings
     autoDraw: true,
-    drawFrequency: 3, // every N messages
-    defaultSpread: 'three', // single | three | cross
-    reversalChance: 15, // 0-50 percent
+    drawFrequency: 3,
+    defaultSpread: 'three',
+    reversalChance: 15,
 
     // Influence
-    influenceGainRate: 3, // 1-5
+    influenceGainRate: 3,
     naturalDecay: false,
 
-    // Hijack (future)
+    // Hijack
     hijackEnabled: false,
     hijackMaxTier: 1,
 };
@@ -81,95 +82,102 @@ function saveSettings() {
 }
 
 // =============================================================================
+// HELPERS
+// =============================================================================
+
+/**
+ * Get the best container for UI elements.
+ * #sheld avoids CSS transform issues that break position:fixed.
+ */
+function getContainer() {
+    return $('#sheld').length ? $('#sheld') : $('body');
+}
+
+// =============================================================================
 // UI INITIALIZATION
 // =============================================================================
 
 async function initUI() {
     try {
-        // Load main panel template
-        toastr.info(`Loading template from: ${EXTENSION_NAME}`, 'The Chorus', { timeOut: 5000 });
         const panelHtml = await renderExtensionTemplateAsync(EXTENSION_NAME, 'template');
-        $('body').append(panelHtml);
 
-        // Remove template FAB (we'll create our own with guaranteed inline styles)
-        $('#chorus-fab').remove();
+        // Parse template into temp wrapper so we can relocate
+        const $temp = $('<div>').html(panelHtml);
 
-        // Create FAB — use TOP positioning and append to #sheld
-        // (position:fixed breaks when ancestors have CSS transforms)
-        const fabHtml = `<button id="chorus-fab" style="
-            position: absolute !important;
-            z-index: 2147483647 !important;
-            top: calc(100vh - 140px) !important;
-            right: 15px !important;
-            width: 48px !important;
-            height: 48px !important;
-            border-radius: 50% !important;
-            background: #0d0816 !important;
-            border: 1px solid rgba(201, 168, 76, 0.4) !important;
-            box-shadow: 0 2px 12px rgba(0,0,0,0.5), 0 0 15px rgba(201,168,76,0.3) !important;
-            color: #c9a84c !important;
-            font-size: 22px !important;
-            display: flex !important;
-            align-items: center !important;
-            justify-content: center !important;
-            visibility: visible !important;
-            opacity: 1 !important;
-            pointer-events: auto !important;
-        ">🂠</button>`;
+        // Remove template FAB — we create our own with inline positioning
+        $temp.find('#chorus-fab').remove();
 
-        // Append to #sheld (ST's main wrapper) to avoid transform issues
-        if ($('#sheld').length) {
-            $('#sheld').append(fabHtml);
-            toastr.info('FAB appended to #sheld', 'The Chorus', { timeOut: 5000 });
-        } else {
-            $('body').append(fabHtml);
-            toastr.info('FAB appended to body (no #sheld)', 'The Chorus', { timeOut: 5000 });
-        }
+        // Append panel + overlays to container
+        const $container = getContainer();
+        $temp.children().appendTo($container);
 
-        // Report position
-        const fab = document.getElementById('chorus-fab');
-        if (fab) {
-            const rect = fab.getBoundingClientRect();
-            toastr.info(`FAB rect: top=${Math.round(rect.top)} left=${Math.round(rect.left)} w=${Math.round(rect.width)} h=${Math.round(rect.height)}`, 'The Chorus', { timeOut: 8000 });
-        }
+        // Create FAB with absolute positioning (bypasses transform issues)
+        const $fab = $('<button id="chorus-fab" class="chorus-fab" title="The Chorus">🂠</button>');
+        $fab.css({
+            'position': 'absolute',
+            'z-index': '99999',
+            'top': 'calc(100vh - 140px)',
+            'right': '15px',
+        });
+        $container.append($fab);
 
-        // Wire up FAB click
-        $('#chorus-fab').on('click', function(e) {
+        // --- Wire up events ---
+
+        $fab.on('click', function (e) {
             e.preventDefault();
             e.stopPropagation();
-            toastr.info('FAB clicked!', 'The Chorus', { timeOut: 2000 });
             togglePanel();
         });
 
-        // Wire up close button
         $('#chorus-btn-close').on('click', () => togglePanel(false));
+        $('#chorus-btn-narrator').on('click', function () { $(this).toggleClass('active'); });
+        $('#chorus-btn-mute').on('click', function () { $(this).toggleClass('active'); });
 
-        // Wire up tabs
+        // Tabs
         $('.chorus-tabs__btn').on('click', function () {
-            const tab = $(this).data('tab');
-            switchTab(tab);
+            switchTab($(this).data('tab'));
         });
 
-        // Wire up toggles
+        // Toggles
         $('.chorus-toggle').on('click', function () {
             $(this).toggleClass('on');
         });
 
-        // Wire up pickers
+        // Pickers
         $('.chorus-picker__opt').on('click', function () {
             $(this).siblings().removeClass('active');
             $(this).addClass('active');
         });
 
-        // Wire up spread pills
+        // Spread pills
         $('.chorus-spread-pill').on('click', function () {
             $(this).siblings().removeClass('active');
             $(this).addClass('active');
         });
 
+        // Sliders
+        $('#chorus-setting-max-voices').on('input', function () {
+            $('#chorus-max-voices-val').text(this.value);
+        });
+        $('#chorus-setting-birth-sensitivity').on('input', function () {
+            const labels = ['HAIR', 'LOW', 'MED', 'HIGH', 'EXTREME'];
+            $('#chorus-birth-sensitivity-val').text(labels[this.value - 1]);
+        });
+        $('#chorus-setting-draw-freq').on('input', function () {
+            $('#chorus-draw-freq-val').text(this.value);
+        });
+        $('#chorus-setting-reversal-chance').on('input', function () {
+            $('#chorus-reversal-chance-val').text(this.value + '%');
+        });
+        $('#chorus-setting-gain-rate').on('input', function () {
+            const labels = ['SLOW', 'LOW', 'MED', 'FAST', 'RAPID'];
+            $('#chorus-gain-rate-val').text(labels[this.value - 1]);
+        });
+
         console.log(`${LOG_PREFIX} UI initialized`);
     } catch (error) {
         console.error(`${LOG_PREFIX} UI init failed:`, error);
+        toastr.error(`UI failed: ${error.message}`, 'The Chorus', { timeOut: 10000 });
         throw error;
     }
 }
@@ -179,6 +187,7 @@ function destroyUI() {
     $('#chorus-fab').remove();
     $('#chorus-awakening-overlay').remove();
     $('#chorus-dissolution-overlay').remove();
+    panelOpen = false;
 }
 
 // =============================================================================
@@ -205,15 +214,12 @@ function togglePanel(forceState) {
 }
 
 function switchTab(tabName) {
-    // Update tab buttons
     $('.chorus-tabs__btn').removeClass('active');
     $(`.chorus-tabs__btn[data-tab="${tabName}"]`).addClass('active');
 
-    // Update pages
     $('.chorus-page').removeClass('active');
     $(`#chorus-page-${tabName}`).addClass('active');
 
-    // Scroll content to top
     $('.chorus-content').scrollTop(0);
 }
 
@@ -225,7 +231,6 @@ async function addExtensionSettings() {
     const settingsHtml = await renderExtensionTemplateAsync(EXTENSION_NAME, 'settings');
     $('#extensions_settings2').append(settingsHtml);
 
-    // Wire up enable toggle
     $('#chorus-enabled')
         .prop('checked', extensionSettings.enabled)
         .on('change', async function () {
@@ -268,47 +273,31 @@ function onMessageReceived() {
 jQuery(async () => {
     try {
         console.log(`${LOG_PREFIX} Initializing...`);
-        toastr.info('Starting...', 'The Chorus', { timeOut: 3000 });
 
-        // 1. Load settings
         try {
             loadSettings();
         } catch (error) {
             console.error(`${LOG_PREFIX} Settings load failed:`, error);
-            toastr.warning('Settings load failed', 'The Chorus');
         }
 
-        // 2. Add settings to Extensions panel
         try {
             await addExtensionSettings();
         } catch (error) {
             console.error(`${LOG_PREFIX} Settings panel failed:`, error);
-            toastr.warning('Settings panel failed', 'The Chorus');
         }
 
-        // 3. Check enabled
         if (!extensionSettings.enabled) {
             console.log(`${LOG_PREFIX} Extension disabled`);
-            toastr.info('Extension disabled', 'The Chorus');
             return;
         }
 
-        // 4. Initialize UI
         await initUI();
-        toastr.success('UI loaded', 'The Chorus', { timeOut: 3000 });
-
-        // 5. Register events
         registerEvents();
 
         console.log(`${LOG_PREFIX} ✅ Loaded successfully`);
-        toastr.success('✅ Ready', 'The Chorus', { timeOut: 3000 });
 
     } catch (error) {
         console.error(`${LOG_PREFIX} ❌ Critical failure:`, error);
-        toastr.error(
-            'The Chorus failed to initialize.',
-            'The Chorus',
-            { timeOut: 10000 }
-        );
+        toastr.error('The Chorus failed to initialize.', 'The Chorus', { timeOut: 10000 });
     }
 });
