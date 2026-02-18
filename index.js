@@ -91,8 +91,44 @@ async function initUI() {
         const panelHtml = await renderExtensionTemplateAsync(EXTENSION_NAME, 'template');
         $('body').append(panelHtml);
 
+        // Remove template FAB (we'll create our own with guaranteed inline styles)
+        $('#chorus-fab').remove();
+
+        // Create FAB with ALL inline styles — zero CSS dependency
+        const $fab = $(`<button id="chorus-fab" title="The Chorus">🂠</button>`);
+        $fab.attr('style', [
+            'position: fixed !important',
+            'z-index: 99999 !important',
+            'bottom: 70px',
+            'right: 15px',
+            'width: 48px',
+            'height: 48px',
+            'border-radius: 50%',
+            'background: #0d0816',
+            'border: 1px solid rgba(201, 168, 76, 0.4)',
+            'box-shadow: 0 2px 12px rgba(0,0,0,0.5), 0 0 15px rgba(201,168,76,0.3)',
+            'color: #c9a84c',
+            'font-size: 22px',
+            'cursor: pointer',
+            'display: flex !important',
+            'align-items: center',
+            'justify-content: center',
+            'visibility: visible !important',
+            'opacity: 1 !important',
+            'pointer-events: auto !important',
+            'overflow: visible',
+        ].join('; '));
+        $('body').append($fab);
+
         // Wire up FAB
-        $('#chorus-fab').on('click', togglePanel);
+        $fab.on('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            toastr.info('FAB clicked!', 'The Chorus', { timeOut: 2000 });
+            togglePanel();
+        });
+
+        toastr.info(`FAB appended to body, computed display: ${$fab.css('display')}`, 'The Chorus', { timeOut: 5000 });
 
         // Wire up close button
         $('#chorus-btn-close').on('click', () => togglePanel(false));
@@ -119,32 +155,6 @@ async function initUI() {
             $(this).siblings().removeClass('active');
             $(this).addClass('active');
         });
-
-        // Verify FAB exists in DOM
-        const fabExists = $('#chorus-fab').length > 0;
-        const panelExists = $('#chorus-panel').length > 0;
-        toastr.info(`FAB in DOM: ${fabExists}, Panel in DOM: ${panelExists}`, 'The Chorus', { timeOut: 5000 });
-
-        // Fallback: create FAB manually if template didn't include it
-        if (!fabExists) {
-            toastr.warning('FAB missing from template, creating manually', 'The Chorus', { timeOut: 5000 });
-            $('body').append(`
-                <button id="chorus-fab" title="The Chorus">
-                    🂠
-                    <span class="chorus-fab__pip"></span>
-                </button>
-            `);
-            $('#chorus-fab').on('click', togglePanel);
-        }
-
-        // Force FAB visible
-        $('#chorus-fab').css({
-            'display': 'flex',
-            'position': 'fixed',
-            'bottom': '60px',
-            'right': '12px',
-            'z-index': '9998'
-        }).show();
 
         console.log(`${LOG_PREFIX} UI initialized`);
     } catch (error) {
