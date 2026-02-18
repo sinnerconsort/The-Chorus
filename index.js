@@ -63,34 +63,33 @@ const DEFAULT_SETTINGS = {
 // =============================================================================
 let extensionSettings = { ...DEFAULT_SETTINGS };
 let panelOpen = false;
-let activeDetailId = null; // currently expanded voice detail
 
 // =============================================================================
 // ARCANA DEFINITIONS
 // =============================================================================
 const ARCANA = {
-    fool:           { numeral: '0',     glyph: '◎', name: 'The Fool',           color: '#e8d888' },
-    magician:       { numeral: 'I',     glyph: '✦', name: 'The Magician',       color: '#a88cff' },
-    priestess:      { numeral: 'II',    glyph: '☽', name: 'The High Priestess', color: '#8ca8ff' },
-    empress:        { numeral: 'III',   glyph: '♕', name: 'The Empress',        color: '#88cc88' },
-    emperor:        { numeral: 'IV',    glyph: '♔', name: 'The Emperor',        color: '#cc8844' },
-    hierophant:     { numeral: 'V',     glyph: '⚚', name: 'The Hierophant',     color: '#aa9966' },
-    lovers:         { numeral: 'VI',    glyph: '♡', name: 'The Lovers',         color: '#ee88aa' },
-    chariot:        { numeral: 'VII',   glyph: '⚔', name: 'The Chariot',        color: '#ccaa44' },
-    strength:       { numeral: 'VIII',  glyph: '∞', name: 'Strength',           color: '#dd8844' },
-    hermit:         { numeral: 'IX',    glyph: '◈', name: 'The Hermit',         color: '#7788aa' },
-    wheel:          { numeral: 'X',     glyph: '☸', name: 'Wheel of Fortune',   color: '#bb88cc' },
-    justice:        { numeral: 'XI',    glyph: '⚖', name: 'Justice',            color: '#88aacc' },
-    hanged:         { numeral: 'XII',   glyph: '⚓', name: 'The Hanged Man',     color: '#6688aa' },
-    death:          { numeral: 'XIII',  glyph: '✞', name: 'Death',              color: '#888888' },
-    temperance:     { numeral: 'XIV',   glyph: '⚗', name: 'Temperance',         color: '#88bbaa' },
-    devil:          { numeral: 'XV',    glyph: '⛧', name: 'The Devil',          color: '#cc4444' },
-    tower:          { numeral: 'XVI',   glyph: '⚡', name: 'The Tower',          color: '#ff6644' },
-    star:           { numeral: 'XVII',  glyph: '✧', name: 'The Star',           color: '#aaccee' },
-    moon:           { numeral: 'XVIII', glyph: '☾', name: 'The Moon',           color: '#9988bb' },
-    sun:            { numeral: 'XIX',   glyph: '☀', name: 'The Sun',            color: '#eebb44' },
-    judgement:      { numeral: 'XX',    glyph: '♆', name: 'Judgement',           color: '#cc88aa' },
-    world:          { numeral: 'XXI',   glyph: '⊕', name: 'The World',          color: '#88ccaa' },
+    fool:           { numeral: '0',     glyph: '☀', name: 'The Fool',           label: '0 — THE FOOL',           color: '#b8860b', glow: '#ffd700' },
+    magician:       { numeral: 'I',     glyph: '✦', name: 'The Magician',       label: 'I — THE MAGICIAN',       color: '#6b2fa0', glow: '#bb66ff' },
+    priestess:      { numeral: 'II',    glyph: '☽', name: 'The High Priestess', label: 'II — THE PRIESTESS',     color: '#2a4a7f', glow: '#4488cc' },
+    empress:        { numeral: 'III',   glyph: '♕', name: 'The Empress',        label: 'III — THE EMPRESS',      color: '#2a6b3f', glow: '#44cc66' },
+    emperor:        { numeral: 'IV',    glyph: '♔', name: 'The Emperor',        label: 'IV — THE EMPEROR',       color: '#8b5a2b', glow: '#cc8844' },
+    hierophant:     { numeral: 'V',     glyph: '⚚', name: 'The Hierophant',     label: 'V — THE HIEROPHANT',     color: '#6b5b3a', glow: '#aa9966' },
+    lovers:         { numeral: 'VI',    glyph: '❤', name: 'The Lovers',         label: 'VI — THE LOVERS',        color: '#6b2fa0', glow: '#bb66ff' },
+    chariot:        { numeral: 'VII',   glyph: '⚔', name: 'The Chariot',        label: 'VII — THE CHARIOT',      color: '#8b7500', glow: '#ccaa44' },
+    strength:       { numeral: 'VIII',  glyph: '∞', name: 'Strength',           label: 'VIII — STRENGTH',        color: '#8b5a2b', glow: '#dd8844' },
+    hermit:         { numeral: 'IX',    glyph: '🏔', name: 'The Hermit',        label: 'IX — THE HERMIT',        color: '#2a4a7f', glow: '#4488cc' },
+    wheel:          { numeral: 'X',     glyph: '☸', name: 'Wheel of Fortune',   label: 'X — WHEEL OF FORTUNE',   color: '#6b3fa0', glow: '#bb88cc' },
+    justice:        { numeral: 'XI',    glyph: '⚖', name: 'Justice',            label: 'XI — JUSTICE',           color: '#3a5a7f', glow: '#88aacc' },
+    hanged:         { numeral: 'XII',   glyph: '⚓', name: 'The Hanged Man',     label: 'XII — THE HANGED MAN',   color: '#2a4a6f', glow: '#6688aa' },
+    death:          { numeral: 'XIII',  glyph: '✞', name: 'Death',              label: 'XIII — DEATH',           color: '#4a4a4a', glow: '#888888' },
+    temperance:     { numeral: 'XIV',   glyph: '⚗', name: 'Temperance',         label: 'XIV — TEMPERANCE',       color: '#3a6b5a', glow: '#88bbaa' },
+    devil:          { numeral: 'XV',    glyph: '⛧', name: 'The Devil',          label: 'XV — THE DEVIL',         color: '#8b1a1a', glow: '#cc4444' },
+    tower:          { numeral: 'XVI',   glyph: '🗼', name: 'The Tower',          label: 'XVI — THE TOWER',        color: '#8b1a1a', glow: '#ff2244' },
+    star:           { numeral: 'XVII',  glyph: '✧', name: 'The Star',           label: 'XVII — THE STAR',        color: '#4a6a8f', glow: '#aaccee' },
+    moon:           { numeral: 'XVIII', glyph: '☾', name: 'The Moon',           label: 'XVIII — THE MOON',       color: '#5a3a7f', glow: '#9988bb' },
+    sun:            { numeral: 'XIX',   glyph: '☀', name: 'The Sun',            label: 'XIX — THE SUN',          color: '#8b7500', glow: '#eebb44' },
+    judgement:      { numeral: 'XX',    glyph: '♆', name: 'Judgement',           label: 'XX — JUDGEMENT',         color: '#7f3a5a', glow: '#cc88aa' },
+    world:          { numeral: 'XXI',   glyph: '⊕', name: 'The World',          label: 'XXI — THE WORLD',        color: '#3a6b5a', glow: '#88ccaa' },
 };
 
 // =============================================================================
@@ -204,211 +203,224 @@ function getContainer() {
 }
 
 // =============================================================================
-// DECK RENDERING
+// DECK RENDERING — Full Tarot Cards
 // =============================================================================
 
-/**
- * Get voices for the current chat. Uses demo data for now.
- */
+/** Track active canvases so we can stop them on re-render */
+let activeCanvases = [];
+
 function getVoices() {
-    // TODO: Replace with per-chat state from chat_metadata
     return DEMO_VOICES;
 }
 
-/**
- * Get the arcana definition for a voice, with fallback.
- */
 function getArcana(arcanaKey) {
-    return ARCANA[arcanaKey] || { numeral: '?', glyph: '?', name: arcanaKey, color: '#888' };
+    return ARCANA[arcanaKey] || { numeral: '?', glyph: '?', name: arcanaKey, label: '? — UNKNOWN', color: '#888', glow: '#888' };
+}
+
+function hexToRgb(hex) {
+    const r = parseInt(hex.slice(1, 3), 16);
+    const g = parseInt(hex.slice(3, 5), 16);
+    const b = parseInt(hex.slice(5, 7), 16);
+    return { r, g, b };
 }
 
 /**
- * Get influence bar color based on level (green → gold → red).
+ * Generate ink bleed HTML with SVG wave edge and tendrils.
  */
-function getInfluenceColor(influence) {
-    if (influence <= 25) return '#557755';
-    if (influence <= 50) return '#998844';
-    if (influence <= 75) return '#bb7733';
-    return '#cc4444';
-}
-
-/**
- * Build the HTML for a single mini card (used in fan and spreads).
- */
-function buildMiniCard(voice, index) {
-    const arc = getArcana(voice.arcana);
-    const stateClass = `chorus-mini-card--${voice.state}`;
-    const inkHeight = Math.min(voice.influence, 100);
-    const inkColor = voice.state === 'dead' ? '#222' : arc.color;
-
-    return `
-        <div class="chorus-fan__card chorus-mini-card ${stateClass}"
-             data-voice-id="${voice.id}"
-             style="z-index: ${10 + index};"
-             title="${voice.name}">
-            <div class="chorus-mini-card__glyph">${arc.glyph}</div>
-            <div class="chorus-mini-card__name">${voice.name.toUpperCase()}</div>
-            <div class="chorus-mini-card__arcana">${arc.numeral}</div>
-            <div class="chorus-mini-card__influence">${voice.influence}</div>
-            <div class="chorus-mini-card__ink" style="
-                height: ${inkHeight}%;
-                background: linear-gradient(to top,
-                    ${inkColor}33 0%,
-                    ${inkColor}15 60%,
-                    transparent 100%
-                );
-            "></div>
-        </div>
-    `;
-}
-
-/**
- * Build the HTML for a voice detail panel (expandable info card).
- */
-function buildVoiceDetail(voice) {
-    const arc = getArcana(voice.arcana);
-    const infColor = getInfluenceColor(voice.influence);
+function buildInkBleed(voice, arc) {
+    const { r, g, b } = hexToRgb(arc.color);
+    const inf = voice.influence;
     const isDead = voice.state === 'dead';
-    const raises = (voice.influenceTriggers?.raises || []).join(', ');
-    const lowers = (voice.influenceTriggers?.lowers || []).join(', ');
 
-    return `
-        <div class="chorus-voice-detail" id="chorus-detail-${voice.id}" data-voice-id="${voice.id}">
-            <div class="chorus-voice-detail__header">
-                <div class="chorus-voice-detail__glyph">${arc.glyph}</div>
-                <div>
-                    <div class="chorus-voice-detail__name">${voice.name.toUpperCase()}</div>
-                    <div class="chorus-voice-detail__arcana">${arc.name} · ${arc.numeral}</div>
-                </div>
-                <button class="chorus-voice-detail__close" data-voice-id="${voice.id}">✕</button>
-            </div>
-
-            ${isDead ? `
-                <div class="chorus-voice-detail__label">STATUS</div>
-                <div class="chorus-voice-detail__text" style="color: var(--chorus-text-dead);">
-                    This voice has been silenced. The card is cracked and empty.
-                </div>
-            ` : `
-                <div class="chorus-voice-detail__label">INFLUENCE</div>
-                <div class="chorus-inf-bar">
-                    <div class="chorus-inf-bar__fill" style="width: ${voice.influence}%; background: ${infColor};"></div>
-                </div>
-                <div style="font-family: var(--chorus-font-mono); font-size: 7px; color: var(--chorus-text-ghost); margin-top: 3px;">
-                    ${voice.influence}/100 · ${voice.state.toUpperCase()}
-                </div>
-
-                <div class="chorus-voice-detail__label">PERSONALITY</div>
-                <div class="chorus-voice-detail__text">${voice.personality}</div>
-
-                <div class="chorus-voice-detail__label">SPEAKING STYLE</div>
-                <div class="chorus-voice-detail__text">${voice.speakingStyle}</div>
-
-                <div class="chorus-voice-detail__label">BIRTH MOMENT</div>
-                <div class="chorus-voice-detail__text">${voice.birthMoment}</div>
-
-                <div class="chorus-voice-detail__label">RAISES</div>
-                <div class="chorus-voice-detail__text" style="color: var(--chorus-danger-dim);">${raises}</div>
-
-                <div class="chorus-voice-detail__label">LOWERS</div>
-                <div class="chorus-voice-detail__text" style="color: #557755;">${lowers}</div>
-
-                <div class="chorus-voice-detail__actions">
-                    <button class="chorus-vd-btn chorus-vd-btn--talk">TALK</button>
-                    <button class="chorus-vd-btn chorus-vd-btn--info">HISTORY</button>
-                </div>
-            `}
-        </div>
-    `;
-}
-
-/**
- * Render the fan (fanned hand of cards) into #chorus-fan.
- */
-function renderFan(voices) {
-    const $fan = $('#chorus-fan');
-    $fan.empty();
-
-    const alive = voices.filter(v => v.state !== 'dead');
-    const dead = voices.filter(v => v.state === 'dead');
-    const all = [...alive, ...dead]; // dead cards go to the right edge
-
-    const count = all.length;
-    if (count === 0) {
-        $fan.append('<div style="text-align: center; color: var(--chorus-text-ghost); font-family: var(--chorus-font-mono); font-size: 8px; letter-spacing: 2px; padding-top: 50px;">NO VOICES YET</div>');
-        return;
+    if (isDead) {
+        return `<div class="chorus-tarot__ink" style="height:100%">
+            <div class="chorus-tarot__ink-body" style="background: rgba(30,25,35,0.8)"></div>
+        </div>`;
     }
 
-    // Fan layout: cards arc from center
-    const maxArc = Math.min(count * 10, 50); // total arc degrees
-    const step = count > 1 ? maxArc / (count - 1) : 0;
-    const startAngle = -(maxArc / 2);
-    // Horizontal offset from center per card
-    const spreadPx = Math.min(count * 22, 140);
-    const startX = -(spreadPx / 2);
-    const stepX = count > 1 ? spreadPx / (count - 1) : 0;
+    const tendrils = [];
+    if (inf > 40) tendrils.push(`<div class="chorus-tarot__ink-tendril" style="top:-20px;left:20%;height:16px;background:linear-gradient(to top,rgba(${r},${g},${b},0.4),transparent)"></div>`);
+    if (inf > 60) tendrils.push(`<div class="chorus-tarot__ink-tendril" style="top:-18px;left:65%;width:3px;height:20px;background:linear-gradient(to top,rgba(${r},${g},${b},0.3),transparent)"></div>`);
+    if (inf > 75) tendrils.push(`<div class="chorus-tarot__ink-tendril" style="top:-26px;left:45%;height:24px;background:linear-gradient(to top,rgba(${r},${g},${b},0.5),transparent)"></div>`);
 
-    all.forEach((voice, i) => {
-        const angle = startAngle + (step * i);
-        const xOffset = startX + (stepX * i);
-        const cardHtml = buildMiniCard(voice, i);
-        const $card = $(cardHtml);
-
-        $card.css({
-            'left': `calc(50% + ${xOffset}px - 33px)`,
-            'transform': `rotate(${angle}deg)`,
-        });
-
-        // Lift on hover/touch
-        $card.on('touchstart mouseenter', function () {
-            $(this).css({
-                'transform': `rotate(${angle}deg) translateY(-14px)`,
-                'z-index': '50',
-            });
-        });
-        $card.on('touchend mouseleave', function () {
-            $(this).css({
-                'transform': `rotate(${angle}deg)`,
-                'z-index': `${10 + i}`,
-            });
-        });
-
-        // Tap to open detail
-        $card.on('click', function () {
-            toggleVoiceDetail(voice.id);
-        });
-
-        $fan.append($card);
-    });
-
-    // Fan label
-    const aliveCount = alive.length;
-    const deadCount = dead.length;
-    let label = `${aliveCount} VOICE${aliveCount !== 1 ? 'S' : ''}`;
-    if (deadCount > 0) label += ` · ${deadCount} SILENCED`;
-    $('#chorus-fan-label').text(label);
+    return `<div class="chorus-tarot__ink" style="height:${inf}%">
+        <svg class="chorus-tarot__ink-wave" viewBox="0 0 200 30" preserveAspectRatio="none">
+            <defs><filter id="ib-${voice.id}"><feGaussianBlur stdDeviation="3"/></filter></defs>
+            <path d="M0,30 Q25,${10 + Math.sin(inf * 0.1) * 8} 50,${18 + Math.cos(inf * 0.05) * 6} T100,${15 + Math.sin(inf * 0.08) * 5} T150,${20 + Math.cos(inf * 0.12) * 7} T200,30 L200,30 L0,30 Z" fill="rgba(${r},${g},${b},0.6)" filter="url(#ib-${voice.id})"/>
+            <path d="M0,30 Q30,${14 + Math.cos(inf * 0.07) * 5} 60,${20 + Math.sin(inf * 0.09) * 4} T120,${16 + Math.cos(inf * 0.06) * 6} T180,${22 + Math.sin(inf * 0.11) * 3} T200,30 L200,30 L0,30 Z" fill="rgba(${r},${g},${b},0.4)"/>
+        </svg>
+        <div class="chorus-tarot__ink-body" style="background:linear-gradient(to top,rgba(${r},${g},${b},0.7) 0%,rgba(${r},${g},${b},0.4) 60%,rgba(${r},${g},${b},0.15) 100%)"></div>
+        ${tendrils.join('')}
+    </div>`;
 }
 
 /**
- * Render voice detail panels below the fan.
+ * Build full tarot card HTML.
  */
-function renderVoiceDetails(voices) {
-    const $container = $('#chorus-voice-details');
-    $container.empty();
+function buildTarotCard(voice) {
+    const arc = getArcana(voice.arcana);
+    const isDead = voice.state === 'dead';
+    const borderStyle = voice.state === 'agitated'
+        ? `1px solid ${arc.glow}66` : `1px solid rgba(201,168,76,0.2)`;
+    const shadow = voice.state === 'agitated'
+        ? `0 0 20px ${arc.glow}44, inset 0 0 15px ${arc.glow}22`
+        : voice.state === 'active'
+            ? `0 0 10px ${arc.glow}22`
+            : `0 0 5px rgba(0,0,0,0.5)`;
+    const pulse = voice.state === 'agitated'
+        ? `<div class="chorus-tarot__pulse" style="border-color:${arc.glow}"></div>` : '';
+    const deadClass = isDead ? ' chorus-tarot--dead' : '';
 
-    voices.forEach(voice => {
-        $container.append(buildVoiceDetail(voice));
-    });
-
-    // Wire up close buttons
-    $container.find('.chorus-voice-detail__close').on('click', function (e) {
-        e.stopPropagation();
-        const id = $(this).data('voice-id');
-        closeVoiceDetail(id);
-    });
+    return `<div class="chorus-tarot${deadClass}" id="chorus-card-${voice.id}" data-voice-id="${voice.id}">
+        <div class="chorus-tarot__inner">
+            <!-- FRONT -->
+            <div class="chorus-tarot__face chorus-tarot__front" style="border:${borderStyle};box-shadow:${shadow}">
+                <div class="chorus-tarot__frame-outer"></div>
+                <div class="chorus-tarot__frame-inner"></div>
+                <div class="chorus-tarot__art"><canvas id="chorus-canvas-${voice.id}"></canvas></div>
+                <div class="chorus-tarot__arcana-label">${arc.label}</div>
+                <div class="chorus-tarot__name" style="text-shadow:0 0 10px ${arc.glow}44">${voice.name}</div>
+                <div class="chorus-tarot__state-badge">
+                    <span class="chorus-tarot__badge chorus-tarot__badge--${voice.state}">${voice.state.toUpperCase()}</span>
+                </div>
+                <div class="chorus-tarot__influence-label">${isDead ? 'SILENCED' : `INFLUENCE ${voice.influence}%`}</div>
+                ${buildInkBleed(voice, arc)}
+                <div class="chorus-tarot__scanlines"></div>
+                ${pulse}
+            </div>
+            <!-- BACK -->
+            <div class="chorus-tarot__face chorus-tarot__back" style="border:1px solid rgba(201,168,76,0.2);box-shadow:${shadow}">
+                <div class="chorus-tarot__back-content">
+                    <div class="chorus-tarot__back-name">${voice.name}</div>
+                    <div class="chorus-tarot__back-arcana">${arc.label}</div>
+                    <div class="chorus-tarot__back-divider"></div>
+                    <div class="chorus-tarot__back-personality">${voice.personality}</div>
+                    <div class="chorus-tarot__back-divider"></div>
+                    <div class="chorus-tarot__back-label">BIRTH MEMORY</div>
+                    <div class="chorus-tarot__back-memory">${voice.birthMoment}</div>
+                    ${!isDead ? `
+                        <div class="chorus-tarot__back-buttons">
+                            <button class="chorus-tarot__btn chorus-tarot__btn--talk">TALK</button>
+                            <button class="chorus-tarot__btn chorus-tarot__btn--dissolve">DISSOLVE</button>
+                        </div>
+                    ` : ''}
+                </div>
+                <div class="chorus-tarot__scanlines"></div>
+            </div>
+        </div>
+    </div>`;
 }
 
 /**
- * Update the deck stats counters.
+ * Initialize canvas generative art for a voice card.
+ */
+function initCardCanvas(canvasId, voice) {
+    const canvas = document.getElementById(canvasId);
+    if (!canvas) return null;
+
+    const ctx = canvas.getContext('2d');
+    const w = canvas.width = 150;
+    const h = canvas.height = 148;
+    const arc = getArcana(voice.arcana);
+    const { r, g, b } = hexToRgb(arc.color);
+    let frame = 0;
+    let running = true;
+
+    // Seed from voice id for unique geometry
+    let hash = 0;
+    const seed = voice.id + voice.name;
+    for (let i = 0; i < seed.length; i++) {
+        hash = ((hash << 5) - hash + seed.charCodeAt(i)) | 0;
+    }
+
+    function draw() {
+        if (!running) return;
+        frame++;
+
+        const st = voice.state;
+        const intensity = st === 'agitated' ? 0.8 : st === 'active' ? 0.4 : st === 'dead' ? 0.05 : 0.15;
+
+        // Background
+        ctx.fillStyle = '#0a0612';
+        ctx.fillRect(0, 0, w, h);
+
+        const cx = w / 2, cy = h / 2 - 5;
+        const time = frame * 0.02;
+
+        // Outer circle
+        ctx.strokeStyle = `rgba(${r},${g},${b},${0.3 + intensity * 0.3})`;
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.arc(cx, cy, 48 + Math.sin(time) * 3 * intensity, 0, Math.PI * 2);
+        ctx.stroke();
+
+        // Inner polygon
+        const sides = 3 + (Math.abs(hash) % 5);
+        ctx.strokeStyle = `rgba(${r},${g},${b},${0.5 + intensity * 0.3})`;
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        for (let i = 0; i <= sides; i++) {
+            const angle = (i / sides) * Math.PI * 2 + time * 0.5;
+            const rad = 26 + Math.sin(time + i) * 5 * intensity;
+            const x = cx + Math.cos(angle) * rad;
+            const y = cy + Math.sin(angle) * rad;
+            i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+        }
+        ctx.closePath();
+        ctx.stroke();
+
+        // Radial lines
+        for (let i = 0; i < sides; i++) {
+            const angle = (i / sides) * Math.PI * 2 + time * 0.3;
+            ctx.strokeStyle = `rgba(${r},${g},${b},${0.2 + intensity * 0.2})`;
+            ctx.beginPath();
+            ctx.moveTo(cx, cy);
+            ctx.lineTo(cx + Math.cos(angle) * 48, cy + Math.sin(angle) * 48);
+            ctx.stroke();
+        }
+
+        // Center dot
+        ctx.fillStyle = `rgba(${r},${g},${b},${0.6 + intensity * 0.4})`;
+        ctx.beginPath();
+        ctx.arc(cx, cy, 3 + Math.sin(time * 2) * intensity * 2, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Canvas scanlines
+        ctx.fillStyle = `rgba(0,0,0,${0.08 + intensity * 0.06})`;
+        for (let y = 0; y < h; y += 3) ctx.fillRect(0, y, w, 1);
+
+        // Glitch slices
+        if (st === 'agitated' || (st === 'active' && frame % 60 < 5)) {
+            const count = st === 'agitated' ? 3 + Math.floor(Math.random() * 4) : 1;
+            for (let i = 0; i < count; i++) {
+                const sy = Math.random() * h;
+                const sh = 2 + Math.random() * 8;
+                const shift = (Math.random() - 0.5) * 12 * intensity;
+                try {
+                    const imgData = ctx.getImageData(0, sy, w, Math.min(sh, h - sy));
+                    ctx.putImageData(imgData, shift, sy);
+                } catch (e) { /* ignore */ }
+            }
+        }
+
+        // Static noise
+        const noiseAmt = st === 'agitated' ? 100 : st === 'active' ? 35 : 12;
+        for (let i = 0; i < noiseAmt; i++) {
+            const nx = Math.random() * w, ny = Math.random() * h;
+            const br = Math.random() * 100 + 50;
+            ctx.fillStyle = `rgba(${br},${br},${br + 30},${0.05 + intensity * 0.08})`;
+            ctx.fillRect(nx, ny, 1, 1);
+        }
+
+        requestAnimationFrame(draw);
+    }
+    draw();
+
+    return { stop: () => { running = false; } };
+}
+
+/**
+ * Update deck stats counters.
  */
 function updateDeckStats(voices) {
     const alive = voices.filter(v => v.state !== 'dead').length;
@@ -419,44 +431,63 @@ function updateDeckStats(voices) {
 }
 
 /**
- * Toggle a voice detail panel open/closed.
- */
-function toggleVoiceDetail(voiceId) {
-    const $detail = $(`#chorus-detail-${voiceId}`);
-
-    if (activeDetailId === voiceId) {
-        // Close it
-        closeVoiceDetail(voiceId);
-    } else {
-        // Close any open detail
-        if (activeDetailId) {
-            closeVoiceDetail(activeDetailId);
-        }
-        // Open this one
-        $detail.addClass('open');
-        activeDetailId = voiceId;
-
-        // Scroll into view
-        setTimeout(() => {
-            $detail[0]?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-        }, 100);
-    }
-}
-
-function closeVoiceDetail(voiceId) {
-    $(`#chorus-detail-${voiceId}`).removeClass('open');
-    if (activeDetailId === voiceId) {
-        activeDetailId = null;
-    }
-}
-
-/**
- * Full deck render — call this whenever voices change.
+ * Full deck render.
  */
 function renderDeck() {
+    // Stop existing canvases
+    activeCanvases.forEach(c => c.stop());
+    activeCanvases = [];
+
     const voices = getVoices();
-    renderFan(voices);
-    renderVoiceDetails(voices);
+    const $spread = $('#chorus-card-spread');
+    $spread.empty();
+
+    // Render each voice as a full tarot card
+    voices.forEach(voice => {
+        $spread.append(buildTarotCard(voice));
+    });
+
+    // Add empty slots to fill up to max
+    const emptySlots = Math.max(0, extensionSettings.maxVoices - voices.length);
+    for (let i = 0; i < emptySlots; i++) {
+        $spread.append(`
+            <div class="chorus-tarot--empty">
+                <div class="chorus-empty-q">?</div>
+                <div class="chorus-empty-label">AWAITING</div>
+            </div>
+        `);
+    }
+
+    // Wire up card flips
+    $spread.find('.chorus-tarot').on('click', function (e) {
+        // Don't flip if they tapped a button
+        if ($(e.target).hasClass('chorus-tarot__btn')) return;
+        $(this).toggleClass('flipped');
+    });
+
+    // Wire up TALK buttons
+    $spread.find('.chorus-tarot__btn--talk').on('click', function (e) {
+        e.stopPropagation();
+        const voiceId = $(this).closest('.chorus-tarot').data('voice-id');
+        toastr.info(`Talk to voice: ${voiceId}`, 'The Chorus', { timeOut: 2000 });
+        // TODO: Open 1-on-1 directory
+    });
+
+    // Wire up DISSOLVE buttons
+    $spread.find('.chorus-tarot__btn--dissolve').on('click', function (e) {
+        e.stopPropagation();
+        const voiceId = $(this).closest('.chorus-tarot').data('voice-id');
+        toastr.info(`Dissolve voice: ${voiceId}`, 'The Chorus', { timeOut: 2000 });
+        // TODO: Trigger ego death
+    });
+
+    // Initialize canvases
+    voices.forEach(voice => {
+        const handle = initCardCanvas(`chorus-canvas-${voice.id}`, voice);
+        if (handle) activeCanvases.push(handle);
+    });
+
+    // Update stats
     updateDeckStats(voices);
 }
 
@@ -548,6 +579,10 @@ async function initUI() {
 }
 
 function destroyUI() {
+    // Stop canvas animations
+    activeCanvases.forEach(c => c.stop());
+    activeCanvases = [];
+
     $('#chorus-panel').remove();
     $('#chorus-fab').remove();
     $('#chorus-awakening-overlay').remove();
