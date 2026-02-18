@@ -105,7 +105,7 @@ const DEMO_VOICES = [
         birthMoment: 'When she revealed she never loved you. The exact instant the words landed.',
         influence: 72,
         state: 'agitated',
-        relationships: { voice_002: 'hostile', voice_004: 'allied' },
+        relationship: 'resentful',
         influenceTriggers: {
             raises: ['emotional pain', 'rejection', 'loneliness', 'betrayal'],
             lowers: ['connection', 'healing', 'being heard', 'forgiveness'],
@@ -120,7 +120,7 @@ const DEMO_VOICES = [
         birthMoment: 'The first time you walked into a room and everyone turned to look.',
         influence: 45,
         state: 'active',
-        relationships: { voice_001: 'hostile', voice_003: 'allied' },
+        relationship: 'curious',
         influenceTriggers: {
             raises: ['flirting', 'social pressure', 'desire', 'performance'],
             lowers: ['solitude', 'honesty', 'vulnerability'],
@@ -135,7 +135,7 @@ const DEMO_VOICES = [
         birthMoment: 'Standing on the ledge of the rooftop, not because you wanted to fall — because you wanted to feel what almost-falling felt like.',
         influence: 58,
         state: 'active',
-        relationships: { voice_002: 'allied' },
+        relationship: 'manic',
         influenceTriggers: {
             raises: ['danger', 'adrenaline', 'impulsivity', 'thrill'],
             lowers: ['caution', 'routine', 'planning', 'consequences'],
@@ -150,7 +150,7 @@ const DEMO_VOICES = [
         birthMoment: 'The night you caught your own reflection and didn\'t recognize the person staring back.',
         influence: 18,
         state: 'dormant',
-        relationships: { voice_001: 'allied' },
+        relationship: 'grieving',
         influenceTriggers: {
             raises: ['deception', 'paranoia', 'gaslighting', 'confusion'],
             lowers: ['clarity', 'truth', 'trust', 'certainty'],
@@ -165,7 +165,7 @@ const DEMO_VOICES = [
         birthMoment: 'After the fire. When you crawled out of the wreckage and the sky was full of stars and you thought: I survived.',
         influence: 0,
         state: 'dead',
-        relationships: {},
+        relationship: 'indifferent',
         influenceTriggers: {
             raises: ['hope', 'recovery', 'resilience'],
             lowers: ['despair', 'giving up'],
@@ -492,6 +492,405 @@ function renderDeck() {
 }
 
 // =============================================================================
+// READING TAB — Spreads, Escalation, Commentary
+// =============================================================================
+
+/** Spread position definitions */
+const SPREAD_DEFS = {
+    single: [
+        { key: 'present', label: 'PRESENT' },
+    ],
+    three: [
+        { key: 'situation', label: 'SITUATION' },
+        { key: 'advice', label: 'ADVICE' },
+        { key: 'outcome', label: 'OUTCOME' },
+    ],
+    cross: [
+        { key: 'crown', label: 'CROWN' },
+        { key: 'foundation', label: 'FOUNDATION' },
+        { key: 'heart', label: 'HEART' },
+        { key: 'crossing', label: 'CROSSING' },
+        { key: 'outcome', label: 'OUTCOME' },
+    ],
+};
+
+/** Position gravity — which positions each relationship state prefers */
+const RELATIONSHIP_GRAVITY = {
+    devoted:     ['heart', 'foundation', 'situation'],
+    protective:  ['advice', 'crossing', 'situation'],
+    warm:        ['heart', 'outcome', 'advice'],
+    curious:     ['crown', 'outcome', 'present'],
+    indifferent: ['foundation', 'present'],
+    resentful:   ['crossing', 'outcome', 'situation'],
+    hostile:     ['crossing', 'outcome', 'crown'],
+    obsessed:    ['heart', 'crossing', 'present'],
+    grieving:    ['foundation', 'heart', 'situation'],
+    manic:       ['crown', 'outcome', 'present'],
+};
+
+/** Escalation levels */
+const ESCALATION = {
+    calm:     { label: 'CALM',     spread: 'single', fillPct: 15,  color: '#557755' },
+    rising:   { label: 'RISING',   spread: 'single', fillPct: 40,  color: '#998844' },
+    elevated: { label: 'ELEVATED', spread: 'three',  fillPct: 65,  color: '#bb7733' },
+    crisis:   { label: 'CRISIS',   spread: 'cross',  fillPct: 100, color: '#cc4444' },
+};
+
+/** Current reading state */
+let currentSpread = 'single';
+let currentEscalation = 'calm';
+let currentReading = null; // { spread, slots: [{position, voice, reversed}], commentary: [...] }
+
+/** Demo commentary text per position (replaced by AI generation later) */
+const DEMO_COMMENTARY = {
+    present:    (v) => `${v.name} watches. "${getCommentaryByRelationship(v)}"`,
+    situation:  (v) => `${v.name} reads the scene. "${getCommentaryByRelationship(v)}"`,
+    advice:     (v) => `${v.name} leans in. "${getAdviceByRelationship(v)}"`,
+    outcome:    (v) => `${v.name} sees what's coming. "${getOutcomeByRelationship(v)}"`,
+    heart:      (v) => `${v.name} cuts to the core. "${getCommentaryByRelationship(v)}"`,
+    crossing:   (v) => `${v.name} names the obstacle. "This. This is what stops you."`,
+    foundation: (v) => `${v.name} digs into the past. "You know how we got here."`,
+    crown:      (v) => `${v.name} reaches upward. "What do you actually want? Think about it."`,
+};
+
+function getCommentaryByRelationship(voice) {
+    const lines = {
+        devoted:     'I won\'t let you walk into this blind.',
+        protective:  'Be careful. I\'ve seen this before.',
+        warm:        'You\'ve got this. I believe that.',
+        curious:     'Interesting. Let\'s see what you do.',
+        indifferent: 'Sure. Whatever you think.',
+        resentful:   'You did this. You know you did.',
+        hostile:     'Go ahead. I hope it teaches you something.',
+        obsessed:    'You can\'t shut me out. Not anymore.',
+        grieving:    'We lost something here. Can you feel it?',
+        manic:       'Oh this is HAPPENING and it\'s going to be INCREDIBLE.',
+    };
+    return lines[voice.relationship] || 'I\'m here.';
+}
+
+function getAdviceByRelationship(voice) {
+    const lines = {
+        devoted:     'Listen to me. Just this once, listen.',
+        protective:  'Step back. Look at the whole picture.',
+        warm:        'Follow your instinct. It\'s good.',
+        curious:     'Try the unexpected. See what breaks.',
+        indifferent: 'Do what you want. You will anyway.',
+        resentful:   'Maybe try not repeating the same mistake.',
+        hostile:     'My advice? Suffer. Learn something.',
+        obsessed:    'Stay. Don\'t leave. Don\'t you dare leave.',
+        grieving:    'Honor what was lost before moving forward.',
+        manic:       'DO EVERYTHING. SLEEP LATER.',
+    };
+    return lines[voice.relationship] || 'Choose wisely.';
+}
+
+function getOutcomeByRelationship(voice) {
+    const lines = {
+        devoted:     'If you\'re careful, this ends well. I\'ll make sure of it.',
+        protective:  'There\'s a cliff ahead. I can see it from here.',
+        warm:        'Something good is forming. Give it time.',
+        curious:     'I genuinely don\'t know. That excites me.',
+        indifferent: 'It\'ll end however it ends.',
+        resentful:   'You\'ll get exactly what you deserve.',
+        hostile:     'This is going to hurt. Good.',
+        obsessed:    'We end up together. That\'s the only outcome I accept.',
+        grieving:    'More loss. But maybe a different kind.',
+        manic:       'EVERYTHING CHANGES AND NOTHING IS THE SAME AND ISN\'T THAT BEAUTIFUL.',
+    };
+    return lines[voice.relationship] || 'The future is unclear.';
+}
+
+/**
+ * Build a mini card for a spread slot.
+ */
+function buildSpreadMiniCard(voice) {
+    const arc = getArcana(voice.arcana);
+    const stateClass = `chorus-mini-card--${voice.state}`;
+    const inkHeight = Math.min(voice.influence, 100);
+
+    return `
+        <div class="chorus-mini-card ${stateClass}" data-voice-id="${voice.id}">
+            <div class="chorus-mini-card__glyph">${arc.glyph}</div>
+            <div class="chorus-mini-card__name">${voice.name.toUpperCase()}</div>
+            <div class="chorus-mini-card__arcana">${arc.numeral}</div>
+            <div class="chorus-mini-card__influence">${voice.influence}</div>
+            <div class="chorus-mini-card__ink" style="
+                height: ${inkHeight}%;
+                background: linear-gradient(to top,
+                    ${arc.color}33 0%,
+                    ${arc.color}15 60%,
+                    transparent 100%
+                );
+            "></div>
+        </div>
+    `;
+}
+
+/**
+ * Select voices for spread positions using influence + relationship gravity.
+ * For cross spread, same voice can appear in multiple positions.
+ */
+function selectVoicesForSpread(spreadType) {
+    const voices = getVoices().filter(v => v.state !== 'dead');
+    const positions = SPREAD_DEFS[spreadType];
+    const allowDuplicates = spreadType === 'cross';
+    const slots = [];
+    const usedIds = new Set();
+
+    for (const pos of positions) {
+        // Score each candidate voice for this position
+        let best = null;
+        let bestScore = -1;
+
+        for (const voice of voices) {
+            if (!allowDuplicates && usedIds.has(voice.id)) continue;
+
+            // Base score from influence
+            let score = voice.influence;
+
+            // Gravity bonus: does this voice's relationship state prefer this position?
+            const gravity = RELATIONSHIP_GRAVITY[voice.relationship] || [];
+            if (gravity.includes(pos.key)) {
+                score += 30; // significant bonus for gravitational match
+            }
+
+            // Small random factor to prevent deterministic results
+            score += Math.random() * 15;
+
+            if (score > bestScore) {
+                bestScore = score;
+                best = voice;
+            }
+        }
+
+        if (best) {
+            const reversed = Math.random() * 100 < (extensionSettings.reversalChance || 15);
+            slots.push({
+                position: pos,
+                voice: best,
+                reversed,
+            });
+            usedIds.add(best.id);
+        }
+    }
+
+    return slots;
+}
+
+/**
+ * Render empty slots for a spread type (before drawing).
+ */
+function renderEmptySpread(spreadType) {
+    const $area = $('#chorus-spread-area');
+    $area.empty();
+    $area.removeClass('chorus-spread--single chorus-spread--three chorus-spread--cross');
+    $area.addClass(`chorus-spread--${spreadType}`);
+
+    const positions = SPREAD_DEFS[spreadType];
+
+    positions.forEach(pos => {
+        const posClass = spreadType === 'cross' ? ` chorus-slot--${pos.key}` : '';
+        $area.append(`
+            <div class="chorus-slot${posClass}" data-position="${pos.key}">
+                <div class="chorus-slot__empty">
+                    <div class="chorus-slot__empty-glyph">?</div>
+                </div>
+                <div class="chorus-slot__label">${pos.label}</div>
+            </div>
+        `);
+    });
+}
+
+/**
+ * Render a filled spread with voice cards.
+ */
+function renderFilledSpread(reading) {
+    const $area = $('#chorus-spread-area');
+    $area.empty();
+    $area.removeClass('chorus-spread--single chorus-spread--three chorus-spread--cross');
+    $area.addClass(`chorus-spread--${reading.spread}`);
+
+    reading.slots.forEach(slot => {
+        const posClass = reading.spread === 'cross' ? ` chorus-slot--${slot.position.key}` : '';
+        const reversedClass = slot.reversed ? ' chorus-mini-card--reversed' : '';
+        const arc = getArcana(slot.voice.arcana);
+        const stateClass = `chorus-mini-card--${slot.voice.state}`;
+        const inkHeight = Math.min(slot.voice.influence, 100);
+
+        $area.append(`
+            <div class="chorus-slot${posClass}" data-position="${slot.position.key}">
+                <div class="chorus-mini-card ${stateClass}${reversedClass}" data-voice-id="${slot.voice.id}">
+                    <div class="chorus-mini-card__glyph">${arc.glyph}</div>
+                    <div class="chorus-mini-card__name">${slot.voice.name.toUpperCase()}</div>
+                    <div class="chorus-mini-card__arcana">${arc.numeral}</div>
+                    <div class="chorus-mini-card__influence">${slot.voice.influence}</div>
+                    ${slot.reversed ? '<div class="chorus-mini-card__reversed">REVERSED</div>' : ''}
+                    <div class="chorus-mini-card__ink" style="
+                        height: ${inkHeight}%;
+                        background: linear-gradient(to top,
+                            ${arc.color}33 0%,
+                            ${arc.color}15 60%,
+                            transparent 100%
+                        );
+                    "></div>
+                </div>
+                <div class="chorus-slot__label">${slot.position.label}</div>
+            </div>
+        `);
+    });
+}
+
+/**
+ * Render commentary messages below the spread.
+ */
+function renderCommentary(reading) {
+    const $area = $('#chorus-commentary-area');
+    $area.empty();
+
+    reading.slots.forEach(slot => {
+        const arc = getArcana(slot.voice.arcana);
+        const commentFn = DEMO_COMMENTARY[slot.position.key] || DEMO_COMMENTARY.present;
+        const text = commentFn(slot.voice);
+        const reversedTag = slot.reversed
+            ? `<div class="chorus-commentary__pip-rev">REVERSED</div>` : '';
+
+        $area.append(`
+            <div class="chorus-commentary">
+                <div class="chorus-commentary__pip">
+                    <div class="chorus-commentary__pip-glyph">${arc.glyph}</div>
+                    <div class="chorus-commentary__pip-pos">${slot.position.label}</div>
+                    ${reversedTag}
+                </div>
+                <div class="chorus-commentary__body">
+                    <div class="chorus-commentary__name" style="color: ${arc.glow}">${slot.voice.name}</div>
+                    <div class="chorus-commentary__context">${arc.label} · ${slot.voice.relationship.toUpperCase()} · INF ${slot.voice.influence}</div>
+                    <div class="chorus-commentary__text">${text}</div>
+                </div>
+            </div>
+        `);
+    });
+}
+
+/**
+ * Update the escalation indicator display.
+ */
+function updateEscalationUI(level) {
+    const esc = ESCALATION[level];
+    const $container = $('#chorus-escalation');
+    $container.removeClass('chorus-escalation--calm chorus-escalation--rising chorus-escalation--elevated chorus-escalation--crisis');
+    $container.addClass(`chorus-escalation--${level}`);
+    $('#chorus-escalation-fill').css({
+        'width': `${esc.fillPct}%`,
+        'background': esc.color,
+    });
+    $('#chorus-escalation-label').text(esc.label);
+}
+
+/**
+ * Switch spread type (from pills or escalation).
+ */
+function switchSpread(spreadType, fromEscalation = false) {
+    currentSpread = spreadType;
+
+    // Update pills
+    $('.chorus-spread-pill').removeClass('active escalated');
+    $(`.chorus-spread-pill[data-spread="${spreadType}"]`).addClass('active');
+    if (fromEscalation) {
+        $(`.chorus-spread-pill[data-spread="${spreadType}"]`).addClass('escalated');
+    }
+
+    // Render empty spread or re-render current reading
+    if (currentReading && currentReading.spread === spreadType) {
+        renderFilledSpread(currentReading);
+        renderCommentary(currentReading);
+    } else {
+        renderEmptySpread(spreadType);
+        // Clear commentary
+        $('#chorus-commentary-area').html(`
+            <div class="chorus-commentary-empty" id="chorus-commentary-empty">
+                <div class="chorus-commentary-empty__glyph">☾</div>
+                <div class="chorus-commentary-empty__text">Draw a spread to hear from your voices</div>
+            </div>
+        `);
+    }
+}
+
+/**
+ * Execute a draw — select voices, fill spread, render commentary.
+ */
+function executeDraw() {
+    const slots = selectVoicesForSpread(currentSpread);
+    if (slots.length === 0) {
+        toastr.warning('No voices available to draw', 'The Chorus', { timeOut: 2000 });
+        return;
+    }
+
+    currentReading = {
+        spread: currentSpread,
+        slots: slots,
+        timestamp: Date.now(),
+    };
+
+    renderFilledSpread(currentReading);
+
+    // Stagger commentary appearance
+    setTimeout(() => {
+        renderCommentary(currentReading);
+    }, slots.length * 200 + 300);
+}
+
+/**
+ * Simulate escalation cycle (for demo — replaced by real scanner later).
+ */
+function cycleEscalation() {
+    const levels = ['calm', 'rising', 'elevated', 'crisis'];
+    const currentIdx = levels.indexOf(currentEscalation);
+    const nextIdx = (currentIdx + 1) % levels.length;
+    currentEscalation = levels[nextIdx];
+
+    const esc = ESCALATION[currentEscalation];
+    updateEscalationUI(currentEscalation);
+
+    // Auto-escalate spread type
+    if (currentSpread !== esc.spread) {
+        switchSpread(esc.spread, true);
+    }
+}
+
+/**
+ * Initialize the reading tab — wire up pills, draw button, escalation.
+ */
+function initReadingTab() {
+    // Spread pills
+    $(document).on('click', '.chorus-spread-pill', function () {
+        const spread = $(this).data('spread');
+        switchSpread(spread);
+    });
+
+    // Draw button
+    $(document).on('click', '#chorus-draw-btn', function () {
+        executeDraw();
+    });
+
+    // Long-press draw button to cycle escalation (demo/testing)
+    let longPressTimer = null;
+    $(document).on('touchstart mousedown', '#chorus-draw-btn', function (e) {
+        longPressTimer = setTimeout(() => {
+            cycleEscalation();
+            toastr.info(`Escalation: ${currentEscalation.toUpperCase()}`, 'The Chorus', { timeOut: 1500 });
+        }, 800);
+    });
+    $(document).on('touchend mouseup mouseleave', '#chorus-draw-btn', function () {
+        clearTimeout(longPressTimer);
+    });
+
+    // Initial state
+    renderEmptySpread(currentSpread);
+    updateEscalationUI(currentEscalation);
+}
+
+// =============================================================================
 // UI INITIALIZATION
 // =============================================================================
 
@@ -569,6 +968,9 @@ async function initUI() {
 
         // Render deck with current voices
         renderDeck();
+
+        // Initialize reading tab
+        initReadingTab();
 
         console.log(`${LOG_PREFIX} UI initialized`);
     } catch (error) {

@@ -472,14 +472,89 @@
     background: rgba(201, 168, 76, 0.08);
 }
 
+/* Auto-escalation highlight on the pill */
+.chorus-spread-pill.escalated {
+    animation: chorus-pill-pulse 1.5s ease-in-out 3;
+}
+@keyframes chorus-pill-pulse {
+    0%, 100% { box-shadow: none; }
+    50% { box-shadow: 0 0 8px var(--chorus-gold-faint); }
+}
+
+
+/* =============================================================================
+   ESCALATION INDICATOR
+   ============================================================================= */
+.chorus-escalation {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
+    padding: 0 8px;
+}
+
+.chorus-escalation__bar {
+    flex: 1;
+    height: 3px;
+    border-radius: 2px;
+    background: rgba(13, 8, 22, 0.6);
+    overflow: hidden;
+}
+
+.chorus-escalation__fill {
+    height: 100%;
+    border-radius: 2px;
+    width: 15%;
+    transition: width 1s var(--chorus-ease-out), background 0.6s;
+    background: #557755;
+}
+
+/* Escalation states */
+.chorus-escalation--calm .chorus-escalation__fill {
+    width: 15%;
+    background: #557755;
+}
+.chorus-escalation--rising .chorus-escalation__fill {
+    width: 40%;
+    background: #998844;
+}
+.chorus-escalation--elevated .chorus-escalation__fill {
+    width: 65%;
+    background: #bb7733;
+}
+.chorus-escalation--crisis .chorus-escalation__fill {
+    width: 100%;
+    background: #cc4444;
+    box-shadow: 0 0 6px rgba(204, 68, 68, 0.4);
+}
+
+.chorus-escalation__label {
+    font-family: var(--chorus-font-mono);
+    font-size: 7px;
+    letter-spacing: 2px;
+    color: var(--chorus-text-ghost);
+    min-width: 50px;
+    text-align: right;
+    transition: color 0.6s;
+}
+
+.chorus-escalation--crisis .chorus-escalation__label {
+    color: #cc4444;
+}
+.chorus-escalation--elevated .chorus-escalation__label {
+    color: #bb7733;
+}
+
 
 /* =============================================================================
    SPREAD LAYOUTS
    ============================================================================= */
 .chorus-spread {
     margin: 0 auto 12px;
+    min-height: 120px;
 }
 
+/* --- SINGLE --- */
 .chorus-spread--single {
     display: flex;
     justify-content: center;
@@ -487,6 +562,7 @@
     align-items: center;
 }
 
+/* --- THREE --- */
 .chorus-spread--three {
     display: flex;
     justify-content: center;
@@ -495,6 +571,12 @@
     align-items: flex-start;
 }
 
+/* --- CROSS (Celtic-lite 5 card) ---
+   Layout:
+            [Crown]
+   [Foundation] [Heart] [Crossing]
+            [Outcome]
+*/
 .chorus-spread--cross {
     display: grid;
     grid-template-columns: 1fr 1fr 1fr;
@@ -506,6 +588,13 @@
     justify-items: center;
     align-items: center;
 }
+
+/* Cross grid positions */
+.chorus-slot--crown     { grid-column: 2; grid-row: 1; }
+.chorus-slot--foundation { grid-column: 1; grid-row: 2; }
+.chorus-slot--heart     { grid-column: 2; grid-row: 2; }
+.chorus-slot--crossing  { grid-column: 3; grid-row: 2; }
+.chorus-slot--outcome   { grid-column: 2; grid-row: 3; }
 
 /* Spread slot */
 .chorus-slot {
@@ -521,6 +610,53 @@
     color: var(--chorus-gold-faint);
     letter-spacing: 1px;
     text-transform: uppercase;
+}
+
+/* Empty slot placeholder (before draw) */
+.chorus-slot__empty {
+    width: 72px;
+    height: 106px;
+    border-radius: var(--chorus-card-radius-sm);
+    border: 1px dashed rgba(201, 168, 76, 0.1);
+    background: rgba(13, 8, 22, 0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.chorus-slot__empty-glyph {
+    font-size: 16px;
+    color: rgba(201, 168, 76, 0.06);
+}
+
+/* Card deal animation */
+.chorus-slot .chorus-mini-card {
+    animation: chorus-deal-in 0.5s var(--chorus-ease-out) both;
+}
+.chorus-slot:nth-child(2) .chorus-mini-card { animation-delay: 0.15s; }
+.chorus-slot:nth-child(3) .chorus-mini-card { animation-delay: 0.3s; }
+.chorus-slot:nth-child(4) .chorus-mini-card { animation-delay: 0.45s; }
+.chorus-slot:nth-child(5) .chorus-mini-card { animation-delay: 0.6s; }
+
+@keyframes chorus-deal-in {
+    0%   { transform: translateY(-20px) scale(0.8); opacity: 0; }
+    100% { transform: translateY(0) scale(1); opacity: 1; }
+}
+
+/* Commentary empty state */
+.chorus-commentary-empty {
+    text-align: center;
+    padding: 16px 8px;
+}
+.chorus-commentary-empty__glyph {
+    font-size: 20px;
+    color: rgba(201, 168, 76, 0.08);
+    margin-bottom: 6px;
+}
+.chorus-commentary-empty__text {
+    font-family: var(--chorus-font-mono);
+    font-size: 8px;
+    color: var(--chorus-text-dead);
+    letter-spacing: 1px;
 }
 
 

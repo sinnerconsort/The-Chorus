@@ -47,15 +47,23 @@
         <!-- ============ READING TAB ============ -->
         <div class="chorus-page active" id="chorus-page-reading">
 
+            <!-- Escalation indicator -->
+            <div class="chorus-escalation" id="chorus-escalation">
+                <div class="chorus-escalation__bar">
+                    <div class="chorus-escalation__fill" id="chorus-escalation-fill"></div>
+                </div>
+                <div class="chorus-escalation__label" id="chorus-escalation-label">CALM</div>
+            </div>
+
             <!-- Spread type selector -->
-            <div class="chorus-spread-pills">
-                <button class="chorus-spread-pill" data-spread="single">SINGLE</button>
-                <button class="chorus-spread-pill active" data-spread="three">THREE</button>
+            <div class="chorus-spread-pills" id="chorus-spread-pills">
+                <button class="chorus-spread-pill active" data-spread="single">SINGLE</button>
+                <button class="chorus-spread-pill" data-spread="three">THREE</button>
                 <button class="chorus-spread-pill" data-spread="cross">CROSS</button>
             </div>
 
-            <!-- Spread display area (dynamically populated) -->
-            <div class="chorus-spread chorus-spread--three" id="chorus-spread-area">
+            <!-- Spread display area -->
+            <div class="chorus-spread chorus-spread--single" id="chorus-spread-area">
                 <!-- Slots injected here by JS -->
             </div>
 
@@ -64,8 +72,12 @@
 
             <div class="chorus-divider"></div>
 
-            <!-- Commentary (dynamically populated) -->
+            <!-- Commentary area -->
             <div class="chorus-card" id="chorus-commentary-area">
+                <div class="chorus-commentary-empty" id="chorus-commentary-empty">
+                    <div class="chorus-commentary-empty__glyph">☾</div>
+                    <div class="chorus-commentary-empty__text">Draw a spread to hear from your voices</div>
+                </div>
                 <!-- Commentary messages injected here by JS -->
             </div>
 
