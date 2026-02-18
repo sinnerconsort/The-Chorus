@@ -68,28 +68,28 @@ let panelOpen = false;
 // ARCANA DEFINITIONS
 // =============================================================================
 const ARCANA = {
-    fool:           { numeral: '0',     glyph: '☀', name: 'The Fool',           label: '0 — THE FOOL',           color: '#b8860b', glow: '#ffd700' },
+    fool:           { numeral: '0',     glyph: '◯', name: 'The Fool',           label: '0 — THE FOOL',           color: '#b8860b', glow: '#ffd700' },
     magician:       { numeral: 'I',     glyph: '✦', name: 'The Magician',       label: 'I — THE MAGICIAN',       color: '#6b2fa0', glow: '#bb66ff' },
     priestess:      { numeral: 'II',    glyph: '☽', name: 'The High Priestess', label: 'II — THE PRIESTESS',     color: '#2a4a7f', glow: '#4488cc' },
-    empress:        { numeral: 'III',   glyph: '♕', name: 'The Empress',        label: 'III — THE EMPRESS',      color: '#2a6b3f', glow: '#44cc66' },
-    emperor:        { numeral: 'IV',    glyph: '♔', name: 'The Emperor',        label: 'IV — THE EMPEROR',       color: '#8b5a2b', glow: '#cc8844' },
-    hierophant:     { numeral: 'V',     glyph: '⚚', name: 'The Hierophant',     label: 'V — THE HIEROPHANT',     color: '#6b5b3a', glow: '#aa9966' },
-    lovers:         { numeral: 'VI',    glyph: '❤', name: 'The Lovers',         label: 'VI — THE LOVERS',        color: '#6b2fa0', glow: '#bb66ff' },
-    chariot:        { numeral: 'VII',   glyph: '⚔', name: 'The Chariot',        label: 'VII — THE CHARIOT',      color: '#8b7500', glow: '#ccaa44' },
+    empress:        { numeral: 'III',   glyph: '◈', name: 'The Empress',        label: 'III — THE EMPRESS',      color: '#2a6b3f', glow: '#44cc66' },
+    emperor:        { numeral: 'IV',    glyph: '▣', name: 'The Emperor',        label: 'IV — THE EMPEROR',       color: '#8b5a2b', glow: '#cc8844' },
+    hierophant:     { numeral: 'V',     glyph: '△', name: 'The Hierophant',     label: 'V — THE HIEROPHANT',     color: '#6b5b3a', glow: '#aa9966' },
+    lovers:         { numeral: 'VI',    glyph: '◇', name: 'The Lovers',         label: 'VI — THE LOVERS',        color: '#6b2fa0', glow: '#bb66ff' },
+    chariot:        { numeral: 'VII',   glyph: '⬡', name: 'The Chariot',        label: 'VII — THE CHARIOT',      color: '#8b7500', glow: '#ccaa44' },
     strength:       { numeral: 'VIII',  glyph: '∞', name: 'Strength',           label: 'VIII — STRENGTH',        color: '#8b5a2b', glow: '#dd8844' },
-    hermit:         { numeral: 'IX',    glyph: '🏔', name: 'The Hermit',        label: 'IX — THE HERMIT',        color: '#2a4a7f', glow: '#4488cc' },
-    wheel:          { numeral: 'X',     glyph: '☸', name: 'Wheel of Fortune',   label: 'X — WHEEL OF FORTUNE',   color: '#6b3fa0', glow: '#bb88cc' },
-    justice:        { numeral: 'XI',    glyph: '⚖', name: 'Justice',            label: 'XI — JUSTICE',           color: '#3a5a7f', glow: '#88aacc' },
-    hanged:         { numeral: 'XII',   glyph: '⚓', name: 'The Hanged Man',     label: 'XII — THE HANGED MAN',   color: '#2a4a6f', glow: '#6688aa' },
+    hermit:         { numeral: 'IX',    glyph: '⊙', name: 'The Hermit',         label: 'IX — THE HERMIT',        color: '#2a4a7f', glow: '#4488cc' },
+    wheel:          { numeral: 'X',     glyph: '⊗', name: 'Wheel of Fortune',   label: 'X — WHEEL OF FORTUNE',   color: '#6b3fa0', glow: '#bb88cc' },
+    justice:        { numeral: 'XI',    glyph: '⬠', name: 'Justice',            label: 'XI — JUSTICE',           color: '#3a5a7f', glow: '#88aacc' },
+    hanged:         { numeral: 'XII',   glyph: '▽', name: 'The Hanged Man',     label: 'XII — THE HANGED MAN',   color: '#2a4a6f', glow: '#6688aa' },
     death:          { numeral: 'XIII',  glyph: '✞', name: 'Death',              label: 'XIII — DEATH',           color: '#4a4a4a', glow: '#888888' },
-    temperance:     { numeral: 'XIV',   glyph: '⚗', name: 'Temperance',         label: 'XIV — TEMPERANCE',       color: '#3a6b5a', glow: '#88bbaa' },
+    temperance:     { numeral: 'XIV',   glyph: '⊕', name: 'Temperance',         label: 'XIV — TEMPERANCE',       color: '#3a6b5a', glow: '#88bbaa' },
     devil:          { numeral: 'XV',    glyph: '⛧', name: 'The Devil',          label: 'XV — THE DEVIL',         color: '#8b1a1a', glow: '#cc4444' },
-    tower:          { numeral: 'XVI',   glyph: '🗼', name: 'The Tower',          label: 'XVI — THE TOWER',        color: '#8b1a1a', glow: '#ff2244' },
+    tower:          { numeral: 'XVI',   glyph: '↯', name: 'The Tower',          label: 'XVI — THE TOWER',        color: '#8b1a1a', glow: '#ff2244' },
     star:           { numeral: 'XVII',  glyph: '✧', name: 'The Star',           label: 'XVII — THE STAR',        color: '#4a6a8f', glow: '#aaccee' },
     moon:           { numeral: 'XVIII', glyph: '☾', name: 'The Moon',           label: 'XVIII — THE MOON',       color: '#5a3a7f', glow: '#9988bb' },
-    sun:            { numeral: 'XIX',   glyph: '☀', name: 'The Sun',            label: 'XIX — THE SUN',          color: '#8b7500', glow: '#eebb44' },
+    sun:            { numeral: 'XIX',   glyph: '☉', name: 'The Sun',            label: 'XIX — THE SUN',          color: '#8b7500', glow: '#eebb44' },
     judgement:      { numeral: 'XX',    glyph: '♆', name: 'Judgement',           label: 'XX — JUDGEMENT',         color: '#7f3a5a', glow: '#cc88aa' },
-    world:          { numeral: 'XXI',   glyph: '⊕', name: 'The World',          label: 'XXI — THE WORLD',        color: '#3a6b5a', glow: '#88ccaa' },
+    world:          { numeral: 'XXI',   glyph: '⬡', name: 'The World',          label: 'XXI — THE WORLD',        color: '#3a6b5a', glow: '#88ccaa' },
 };
 
 // =============================================================================
@@ -918,7 +918,7 @@ async function initUI() {
         $temp.children().appendTo($container);
 
         // Create FAB with absolute positioning (bypasses transform issues)
-        const $fab = $('<button id="chorus-fab" class="chorus-fab" title="The Chorus">🂠</button>');
+        const $fab = $('<button id="chorus-fab" class="chorus-fab" title="The Chorus">◆</button>');
         $fab.css({
             'position': 'absolute',
             'z-index': '99999',
