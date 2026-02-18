@@ -167,34 +167,11 @@
     }
 }
 
-/* Panel open/close animations */
-#chorus-panel.chorus-panel--opening {
-    animation: chorus-panel-open 0.35s var(--chorus-ease-out) forwards;
-}
-
+/* Panel open/close — simple show/hide, no animation
+   (CSS animations + position:absolute + transforms = flicker) */
+#chorus-panel.chorus-panel--opening,
 #chorus-panel.chorus-panel--closing {
-    animation: chorus-panel-close 0.3s ease-in forwards;
-}
-
-@keyframes chorus-panel-open {
-    from { opacity: 0; transform: translateX(20px); }
-    to   { opacity: 1; transform: translateX(0); }
-}
-
-@keyframes chorus-panel-close {
-    from { opacity: 1; transform: translateX(0); }
-    to   { opacity: 0; transform: translateX(20px); }
-}
-
-@media (max-width: 1000px) {
-    @keyframes chorus-panel-open {
-        from { opacity: 0; }
-        to   { opacity: 1; }
-    }
-    @keyframes chorus-panel-close {
-        from { opacity: 1; }
-        to   { opacity: 0; }
-    }
+    /* reserved for future use when animation is stable */
 }
 
 

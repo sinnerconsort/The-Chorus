@@ -121,13 +121,8 @@ async function initUI() {
         });
         $container.append($fab);
 
-        // --- Wire up events ---
-
-        $fab.on('click', function (e) {
-            e.preventDefault();
-            e.stopPropagation();
-            togglePanel();
-        });
+        // Make FAB draggable (also handles click internally)
+        setupDraggableFab();
 
         $('#chorus-btn-close').on('click', () => togglePanel(false));
         $('#chorus-btn-narrator').on('click', function () { $(this).toggleClass('active'); });
@@ -199,18 +194,119 @@ function togglePanel(forceState) {
     const shouldOpen = typeof forceState === 'boolean' ? forceState : !panelOpen;
 
     if (shouldOpen && !panelOpen) {
-        panel.addClass('open chorus-panel--opening');
-        panel.one('animationend', () => panel.removeClass('chorus-panel--opening'));
+        panel.addClass('open');
         panelOpen = true;
         $('#chorus-fab').addClass('chorus-fab--active');
     } else if (!shouldOpen && panelOpen) {
-        panel.addClass('chorus-panel--closing');
-        panel.one('animationend', () => {
-            panel.removeClass('open chorus-panel--closing');
-        });
+        panel.removeClass('open');
         panelOpen = false;
         $('#chorus-fab').removeClass('chorus-fab--active');
     }
+}
+
+// =============================================================================
+// DRAGGABLE FAB
+// =============================================================================
+
+function setupDraggableFab() {
+    const $fab = $('#chorus-fab');
+    if (!$fab.length) return;
+
+    let isDragging = false;
+    let wasDragged = false;
+    let touchStartTime = 0;
+    let touchStartX = 0;
+    let touchStartY = 0;
+    let fabStartX = 0;
+    let fabStartY = 0;
+
+    const MOVE_THRESHOLD = 8; // px before drag starts
+
+    $fab.on('touchstart', function (e) {
+        const touch = e.originalEvent.touches[0];
+        touchStartTime = Date.now();
+        touchStartX = touch.clientX;
+        touchStartY = touch.clientY;
+
+        const rect = this.getBoundingClientRect();
+        fabStartX = rect.left;
+        fabStartY = rect.top;
+
+        isDragging = false;
+        wasDragged = false;
+    });
+
+    $fab.on('touchmove', function (e) {
+        const touch = e.originalEvent.touches[0];
+        const deltaX = touch.clientX - touchStartX;
+        const deltaY = touch.clientY - touchStartY;
+        const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+
+        if (!isDragging && distance > MOVE_THRESHOLD) {
+            isDragging = true;
+            wasDragged = true;
+        }
+
+        if (isDragging) {
+            e.preventDefault();
+
+            let newX = fabStartX + deltaX;
+            let newY = fabStartY + deltaY;
+
+            // Constrain to viewport
+            const w = $fab.outerWidth();
+            const h = $fab.outerHeight();
+            const pad = 5;
+            newX = Math.max(pad, Math.min(window.innerWidth - w - pad, newX));
+            newY = Math.max(pad, Math.min(window.innerHeight - h - pad, newY));
+
+            // Use left/top (absolute within #sheld)
+            $fab.css({
+                'left': newX + 'px',
+                'top': newY + 'px',
+                'right': 'auto',
+                'transition': 'none',
+            });
+        }
+    });
+
+    $fab.on('touchend', function () {
+        isDragging = false;
+        $fab.css('transition', '');
+
+        // Save position to localStorage
+        if (wasDragged) {
+            const pos = {
+                left: $fab.css('left'),
+                top: $fab.css('top'),
+            };
+            try {
+                localStorage.setItem('chorus-fab-pos', JSON.stringify(pos));
+            } catch (e) { /* ignore */ }
+        }
+    });
+
+    // Intercept click — only toggle panel if it wasn't a drag
+    $fab.off('click').on('click', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        if (!wasDragged) {
+            togglePanel();
+        }
+        wasDragged = false;
+    });
+
+    // Restore saved position
+    try {
+        const saved = JSON.parse(localStorage.getItem('chorus-fab-pos'));
+        if (saved && saved.left && saved.top) {
+            $fab.css({
+                'left': saved.left,
+                'top': saved.top,
+                'right': 'auto',
+            });
+        }
+    } catch (e) { /* ignore */ }
 }
 
 function switchTab(tabName) {
