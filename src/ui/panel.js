@@ -294,14 +294,14 @@ export async function initUI() {
             saveSettings();
         });
 
-        // ── Narrator picker (persist) ──
+        // ── Narrator archetype picker ──
         const $narratorPicker = $('#chorus-setting-narrator');
         $narratorPicker.find('.chorus-picker__opt').removeClass('active');
-        $narratorPicker.find(`[data-value="${extensionSettings.narratorPersona || 'sardonic'}"]`).addClass('active');
+        $narratorPicker.find(`[data-value="${extensionSettings.narratorArchetype || 'stage_manager'}"]`).addClass('active');
         $narratorPicker.find('.chorus-picker__opt').on('click', function () {
             $(this).siblings().removeClass('active');
             $(this).addClass('active');
-            extensionSettings.narratorPersona = $(this).data('value');
+            extensionSettings.narratorArchetype = $(this).data('value');
             saveSettings();
         });
 

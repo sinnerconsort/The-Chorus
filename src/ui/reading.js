@@ -79,14 +79,19 @@ export function renderSidebarCommentary(commentary) {
         const arc = getArcana(entry.arcana);
         const relColor = RELATIONSHIP_COLORS[entry.relationship] || '#888888';
         const isAgitated = (entry.relationship === 'manic' || entry.relationship === 'obsessed' || entry.relationship === 'hostile');
+        const isNarrator = entry.isNarrator || entry.voiceId === '_narrator';
+
+        const cssClass = isNarrator
+            ? 'chorus-sidebar-msg chorus-sidebar-msg--narrator'
+            : `chorus-sidebar-msg${isAgitated ? ' chorus-sidebar-msg--agitated' : ''}`;
 
         const $msg = $(`
-            <div class="chorus-sidebar-msg${isAgitated ? ' chorus-sidebar-msg--agitated' : ''}" data-voice-id="${entry.voiceId}">
-                <div class="chorus-sidebar-msg__glyph" style="color:${arc.glow};border-color:${arc.color}44">${arc.glyph}</div>
+            <div class="${cssClass}" data-voice-id="${entry.voiceId}">
+                <div class="chorus-sidebar-msg__glyph" style="color:${isNarrator ? '#c9a84c' : arc.glow};border-color:${isNarrator ? '#c9a84c44' : arc.color + '44'}">${isNarrator ? '\u2726' : arc.glyph}</div>
                 <div class="chorus-sidebar-msg__body">
                     <div class="chorus-sidebar-msg__header">
-                        <span class="chorus-sidebar-msg__name" style="color:${arc.glow}">${entry.name}</span>
-                        <span class="chorus-sidebar-msg__rel" style="color:${relColor}">${entry.relationship}</span>
+                        <span class="chorus-sidebar-msg__name" style="color:${isNarrator ? '#c9a84c' : arc.glow}">${entry.name}</span>
+                        ${isNarrator ? '' : `<span class="chorus-sidebar-msg__rel" style="color:${relColor}">${entry.relationship}</span>`}
                     </div>
                     <div class="chorus-sidebar-msg__text">${escapeHtml(entry.text)}</div>
                 </div>
