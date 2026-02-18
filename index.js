@@ -94,41 +94,53 @@ async function initUI() {
         // Remove template FAB (we'll create our own with guaranteed inline styles)
         $('#chorus-fab').remove();
 
-        // Create FAB with ALL inline styles — zero CSS dependency
-        const $fab = $(`<button id="chorus-fab" title="The Chorus">🂠</button>`);
-        $fab.attr('style', [
-            'position: fixed !important',
-            'z-index: 99999 !important',
-            'bottom: 70px',
-            'right: 15px',
-            'width: 48px',
-            'height: 48px',
-            'border-radius: 50%',
-            'background: #0d0816',
-            'border: 1px solid rgba(201, 168, 76, 0.4)',
-            'box-shadow: 0 2px 12px rgba(0,0,0,0.5), 0 0 15px rgba(201,168,76,0.3)',
-            'color: #c9a84c',
-            'font-size: 22px',
-            'cursor: pointer',
-            'display: flex !important',
-            'align-items: center',
-            'justify-content: center',
-            'visibility: visible !important',
-            'opacity: 1 !important',
-            'pointer-events: auto !important',
-            'overflow: visible',
-        ].join('; '));
-        $('body').append($fab);
+        // DIAGNOSTIC: Giant red square — impossible to miss
+        const fabHtml = `<button id="chorus-fab" style="
+            position: fixed !important;
+            z-index: 2147483647 !important;
+            bottom: 100px !important;
+            right: 20px !important;
+            width: 80px !important;
+            height: 80px !important;
+            border-radius: 12px !important;
+            background: red !important;
+            border: 4px solid yellow !important;
+            color: white !important;
+            font-size: 30px !important;
+            display: block !important;
+            visibility: visible !important;
+            opacity: 1 !important;
+            pointer-events: auto !important;
+            transform: none !important;
+            clip: auto !important;
+            clip-path: none !important;
+        ">FAB</button>`;
 
-        // Wire up FAB
-        $fab.on('click', function(e) {
+        // Try appending to multiple locations
+        $('body').append(fabHtml);
+        
+        // Also report what containers exist
+        const containers = [];
+        if ($('#sheld').length) containers.push('#sheld');
+        if ($('#chat').length) containers.push('#chat');
+        if ($('body').length) containers.push('body');
+        if ($('#send_form').length) containers.push('#send_form');
+        toastr.info(`Containers found: ${containers.join(', ')}`, 'The Chorus', { timeOut: 8000 });
+        
+        // Report FAB's computed position
+        const fab = document.getElementById('chorus-fab');
+        if (fab) {
+            const rect = fab.getBoundingClientRect();
+            toastr.info(`FAB rect: top=${Math.round(rect.top)} left=${Math.round(rect.left)} w=${Math.round(rect.width)} h=${Math.round(rect.height)}`, 'The Chorus', { timeOut: 8000 });
+        }
+
+        // Wire up FAB click
+        $('#chorus-fab').on('click', function(e) {
             e.preventDefault();
             e.stopPropagation();
             toastr.info('FAB clicked!', 'The Chorus', { timeOut: 2000 });
             togglePanel();
         });
-
-        toastr.info(`FAB appended to body, computed display: ${$fab.css('display')}`, 'The Chorus', { timeOut: 5000 });
 
         // Wire up close button
         $('#chorus-btn-close').on('click', () => togglePanel(false));
