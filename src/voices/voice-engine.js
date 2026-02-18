@@ -25,6 +25,8 @@ import {
     saveChatState,
     getEscalation,
     setEscalation,
+    getMessagesSinceLastDraw,
+    resetMessageCounter,
 } from '../state.js';
 import { classifyMessage } from './classifier.js';
 import {
@@ -629,28 +631,38 @@ async function handleCardDraw(impact, themes, summary) {
     const mode = extensionSettings.drawMode || 'auto';
 
     if (mode === 'manual') {
-        // In manual mode, draws only happen via UI button
         return null;
     }
 
+    const living = getLivingVoices();
+    if (living.length === 0) return null;
+
     // Auto mode: determine spread type from impact
-    let spreadType = null;
+    // Significant/critical always draw immediately (override frequency)
+    // None/minor respect draw frequency
 
     if (impact === 'critical') {
-        spreadType = 'cross';
-    } else if (impact === 'significant') {
-        spreadType = 'three';
-    } else {
-        // none or minor — single card pull (respecting frequency)
-        spreadType = 'single';
+        const cards = await generateSpread('cross', themes, summary);
+        if (!cards || cards.length === 0) return null;
+        resetMessageCounter();
+        return { type: 'cross', cards };
     }
 
-    if (spreadType === 'single') {
-        return await generateSingleCard(themes, summary);
-    } else {
-        const cards = await generateSpread(spreadType, themes, summary);
-        return { type: spreadType, cards };
+    if (impact === 'significant') {
+        const cards = await generateSpread('three', themes, summary);
+        if (!cards || cards.length === 0) return null;
+        resetMessageCounter();
+        return { type: 'three', cards };
     }
+
+    // None/minor — single card pull, respecting frequency
+    const freq = extensionSettings.drawFrequency || 3;
+    const msgCount = getMessagesSinceLastDraw();
+    if (msgCount < freq) return null;
+
+    const card = await generateSingleCard(themes, summary);
+    if (card) resetMessageCounter();
+    return card;
 }
 
 // =============================================================================
@@ -674,5 +686,7 @@ export async function manualSingleDraw() {
 export async function manualSpreadDraw(spreadType = 'three') {
     const recentText = getRecentMessages(1);
     const classification = await classifyMessage(recentText);
-    return await generateSpread(spreadType, classification.themes, classification.summary);
+    const cards = await generateSpread(spreadType, classification.themes, classification.summary);
+    if (!cards || cards.length === 0) return null;
+    return { type: spreadType, cards };
 }
