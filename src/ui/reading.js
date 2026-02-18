@@ -170,12 +170,12 @@ export function clearSidebar() {
 export function renderCardReading(cardReading) {
     if (!cardReading) return;
 
-    if (cardReading.type) {
+    if (cardReading.type && Array.isArray(cardReading.cards)) {
         // Multi-card spread
         currentReading = {
             spread: cardReading.type,
             slots: cardReading.cards.map(card => ({
-                position: { key: card.position, label: card.positionName.toUpperCase() },
+                position: { key: card.position || 'present', label: (card.positionName || 'READING').toUpperCase() },
                 voice: buildVoiceForRender(card),
                 reversed: card.reversed,
                 text: card.text,
@@ -183,12 +183,12 @@ export function renderCardReading(cardReading) {
             timestamp: Date.now(),
         };
         currentSpread = cardReading.type;
-    } else {
+    } else if (cardReading.voiceId) {
         // Single card
         currentReading = {
             spread: 'single',
             slots: [{
-                position: { key: cardReading.position, label: cardReading.positionName.toUpperCase() },
+                position: { key: cardReading.position || 'present', label: (cardReading.positionName || 'PRESENT').toUpperCase() },
                 voice: buildVoiceForRender(cardReading),
                 reversed: cardReading.reversed,
                 text: cardReading.text,
@@ -196,6 +196,9 @@ export function renderCardReading(cardReading) {
             timestamp: Date.now(),
         };
         currentSpread = 'single';
+    } else {
+        console.warn('[The Chorus] renderCardReading: unrecognized shape', cardReading);
+        return;
     }
 
     // Update pills
@@ -211,12 +214,12 @@ export function renderCardReading(cardReading) {
 
 function buildVoiceForRender(card) {
     return {
-        id: card.voiceId,
-        name: card.name,
-        arcana: card.arcana,
+        id: card.voiceId || 'unknown',
+        name: card.name || 'Unknown',
+        arcana: card.arcana || 'fool',
         relationship: card.relationship || 'curious',
         influence: card.influence || 50,
-        state: 'active',
+        state: card.state || 'active',
     };
 }
 
@@ -318,7 +321,7 @@ function renderFilledSpread(reading) {
                     </div>
                     <div class="chorus-spread-card__name" style="text-shadow:0 0 8px ${arc.glow}33">${slot.voice.name}</div>
                     <div class="chorus-spread-card__arcana">${arc.numeral}</div>
-                    <div class="chorus-spread-card__relationship" style="color:${relColor}">${slot.voice.relationship.toUpperCase()}</div>
+                    <div class="chorus-spread-card__relationship" style="color:${relColor}">${(slot.voice.relationship || 'curious').toUpperCase()}</div>
                     ${slot.reversed ? '<div class="chorus-spread-card__reversed-tag">REVERSED</div>' : ''}
                     <div class="chorus-spread-card__influence">INF ${slot.voice.influence}</div>
                     ${buildSpreadInkBleed(slot.voice, arc)}
@@ -353,7 +356,7 @@ function renderCommentary(reading) {
                 </div>
                 <div class="chorus-commentary__body">
                     <div class="chorus-commentary__name" style="color: ${arc.glow}">${slot.voice.name}</div>
-                    <div class="chorus-commentary__context">${arc.label} \u00B7 ${slot.voice.relationship.toUpperCase()} \u00B7 INF ${slot.voice.influence}</div>
+                    <div class="chorus-commentary__context">${arc.label} \u00B7 ${(slot.voice.relationship || 'curious').toUpperCase()} \u00B7 INF ${slot.voice.influence || 0}</div>
                     <div class="chorus-commentary__text">${escapeHtml(text)}</div>
                 </div>
             </div>
