@@ -15,6 +15,7 @@ import { getVoices, getArcana, hexToRgb, extensionSettings, getEscalation } from
 import {
     manualSingleDraw,
     manualSpreadDraw,
+    setDrawLock,
 } from '../voices/voice-engine.js';
 
 // =============================================================================
@@ -55,6 +56,7 @@ const RELATIONSHIP_COLORS = {
 
 let currentSpread = 'single';
 let currentReading = null;
+let isDrawing = false;  // Shared mutex — blocks auto-draws during manual draws
 
 // =============================================================================
 // SIDEBAR COMMENTARY (public)
@@ -155,6 +157,13 @@ export function clearSidebar() {
     $('#chorus-sidebar-count').text('');
 }
 
+/**
+ * Check if a manual draw is in progress (mutex for auto-draws).
+ */
+export function isManualDrawing() {
+    return isDrawing;
+}
+
 // =============================================================================
 // CARD READING (public)
 // =============================================================================
@@ -241,9 +250,11 @@ export function updateEscalationUI(level) {
     });
     $('#chorus-escalation-label').text(esc.label);
 
-    // Auto-escalate spread pills if no active reading
-    if (currentSpread !== esc.spread && !currentReading) {
-        switchSpread(esc.spread, true);
+    // Highlight the suggested spread pill but DON'T auto-switch
+    // User's selection is sacred — just pulse the suggested one
+    $('.chorus-spread-pill').removeClass('escalated');
+    if (esc.spread !== currentSpread) {
+        $(`.chorus-spread-pill[data-spread="${esc.spread}"]`).addClass('escalated');
     }
 }
 
@@ -391,8 +402,6 @@ function switchSpread(spreadType, fromEscalation = false) {
 // MANUAL DRAW (button press → calls engine)
 // =============================================================================
 
-let isDrawing = false;
-
 async function executeManualDraw() {
     if (isDrawing) return;
 
@@ -403,6 +412,7 @@ async function executeManualDraw() {
     }
 
     isDrawing = true;
+    setDrawLock(true);
     const $btn = $('#chorus-draw-btn');
     $btn.text('DRAWING\u2026').prop('disabled', true);
 
@@ -424,6 +434,7 @@ async function executeManualDraw() {
         toastr.error(`Draw failed: ${e.message}`, 'The Chorus', { timeOut: 3000 });
     } finally {
         isDrawing = false;
+        setDrawLock(false);
         $btn.text('DRAW').prop('disabled', false);
     }
 }

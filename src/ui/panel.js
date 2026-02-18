@@ -232,11 +232,7 @@ export async function initUI() {
             $(this).addClass('active');
         });
 
-        // Spread pills
-        $('.chorus-spread-pill').on('click', function () {
-            $(this).siblings().removeClass('active');
-            $(this).addClass('active');
-        });
+        // Spread pills handled by reading.js initReadingTab() via switchSpread
 
         // Sliders
         $('#chorus-setting-max-voices').on('input', function () {
