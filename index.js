@@ -94,40 +94,39 @@ async function initUI() {
         // Remove template FAB (we'll create our own with guaranteed inline styles)
         $('#chorus-fab').remove();
 
-        // DIAGNOSTIC: Giant red square — impossible to miss
+        // Create FAB — use TOP positioning and append to #sheld
+        // (position:fixed breaks when ancestors have CSS transforms)
         const fabHtml = `<button id="chorus-fab" style="
-            position: fixed !important;
+            position: absolute !important;
             z-index: 2147483647 !important;
-            bottom: 100px !important;
-            right: 20px !important;
-            width: 80px !important;
-            height: 80px !important;
-            border-radius: 12px !important;
-            background: red !important;
-            border: 4px solid yellow !important;
-            color: white !important;
-            font-size: 30px !important;
-            display: block !important;
+            top: calc(100vh - 140px) !important;
+            right: 15px !important;
+            width: 48px !important;
+            height: 48px !important;
+            border-radius: 50% !important;
+            background: #0d0816 !important;
+            border: 1px solid rgba(201, 168, 76, 0.4) !important;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.5), 0 0 15px rgba(201,168,76,0.3) !important;
+            color: #c9a84c !important;
+            font-size: 22px !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
             visibility: visible !important;
             opacity: 1 !important;
             pointer-events: auto !important;
-            transform: none !important;
-            clip: auto !important;
-            clip-path: none !important;
-        ">FAB</button>`;
+        ">🂠</button>`;
 
-        // Try appending to multiple locations
-        $('body').append(fabHtml);
-        
-        // Also report what containers exist
-        const containers = [];
-        if ($('#sheld').length) containers.push('#sheld');
-        if ($('#chat').length) containers.push('#chat');
-        if ($('body').length) containers.push('body');
-        if ($('#send_form').length) containers.push('#send_form');
-        toastr.info(`Containers found: ${containers.join(', ')}`, 'The Chorus', { timeOut: 8000 });
-        
-        // Report FAB's computed position
+        // Append to #sheld (ST's main wrapper) to avoid transform issues
+        if ($('#sheld').length) {
+            $('#sheld').append(fabHtml);
+            toastr.info('FAB appended to #sheld', 'The Chorus', { timeOut: 5000 });
+        } else {
+            $('body').append(fabHtml);
+            toastr.info('FAB appended to body (no #sheld)', 'The Chorus', { timeOut: 5000 });
+        }
+
+        // Report position
         const fab = document.getElementById('chorus-fab');
         if (fab) {
             const rect = fab.getBoundingClientRect();
