@@ -35,6 +35,7 @@ import {
 } from './participation.js';
 import { birthVoiceFromEvent, birthVoiceFromPersona } from './voice-birth.js';
 import { processLifecycle, completeTransformation } from './voice-lifecycle.js';
+import { tryAmbientNarration, narrateBirth, narrateDeath } from './narrator.js';
 
 // =============================================================================
 // PROFILE RESOLUTION (shared with classifier)
@@ -472,6 +473,7 @@ export async function processMessage(messageText) {
         cardReading: null,
         lifecycleEvents: [],
         newVoice: null,
+        narrator: null,  // Narrator text (if it speaks)
     };
 
     // ─── Step 1: Classify (includes resolution assessment) ───
@@ -501,15 +503,35 @@ export async function processMessage(messageText) {
         }
     }
 
+    // Narrate lifecycle events (births from transform, deaths)
+    for (const event of result.lifecycleEvents) {
+        if ((event.type === 'resolved' || event.type === 'fade_death') && !result.narrator) {
+            result.narrator = await narrateDeath(event);
+        }
+        if (event.type === 'transforming' && event.newVoice && !result.narrator) {
+            result.narrator = await narrateBirth(event.newVoice);
+        }
+    }
+
     // ─── Step 5: Birth check ───
     if (!result.newVoice) {
         result.newVoice = await checkBirth(impact, themes, summary, messageText);
     }
 
+    // Narrate new birth
+    if (result.newVoice && !result.narrator) {
+        result.narrator = await narrateBirth(result.newVoice);
+    }
+
     // ─── Step 6: Sidebar commentary ───
     result.commentary = await generateSidebarCommentary(themes);
 
-    // ─── Step 7: Card pull / spread (conditional) ───
+    // ─── Step 7: Ambient narrator (if nothing triggered above) ───
+    if (!result.narrator) {
+        result.narrator = await tryAmbientNarration(messageText, result.commentary);
+    }
+
+    // ─── Step 8: Card pull / spread (conditional) ───
     result.cardReading = await handleCardDraw(impact, themes, summary);
 
     return result;
