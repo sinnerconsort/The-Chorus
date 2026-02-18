@@ -20,8 +20,17 @@ import {
 
 // Module imports
 import { EXTENSION_NAME, LOG_PREFIX } from './src/config.js';
-import { extensionSettings, loadSettings, saveSettings } from './src/state.js';
-import { initUI, destroyUI } from './src/ui/panel.js';
+import {
+    extensionSettings,
+    loadSettings,
+    saveSettings,
+    loadChatState,
+    hasActiveChat,
+    incrementMessageCounter,
+    decayAllInfluence,
+    decayAccumulators,
+} from './src/state.js';
+import { initUI, destroyUI, refreshUI } from './src/ui/panel.js';
 
 // =============================================================================
 // SETTINGS PANEL (Extensions drawer)
@@ -57,13 +66,36 @@ function registerEvents() {
 }
 
 function onChatChanged() {
-    // TODO: Load per-chat voice state
-    console.log(`${LOG_PREFIX} Chat changed`);
+    // Load per-chat voice state from chat_metadata
+    loadChatState();
+
+    // Re-render UI with loaded state
+    if (extensionSettings.enabled) {
+        refreshUI();
+    }
+
+    console.log(`${LOG_PREFIX} Chat changed — state ${hasActiveChat() ? 'loaded' : 'cleared'}`);
 }
 
 function onMessageReceived() {
-    // TODO: Run detection scanners, update influence, check draw
-    console.log(`${LOG_PREFIX} Message received`);
+    if (!hasActiveChat()) return;
+
+    // Increment draw counter
+    const count = incrementMessageCounter();
+
+    // Apply natural influence decay if enabled
+    if (extensionSettings.naturalDecay) {
+        decayAllInfluence(1);
+    }
+
+    // Decay accumulators slightly (natural cooldown)
+    decayAccumulators(2);
+
+    // TODO: Run detection scanners on new message
+    // TODO: Check if draw should trigger (count >= drawFrequency)
+    // TODO: Check hijack thresholds
+
+    console.log(`${LOG_PREFIX} Message received (${count} since last draw)`);
 }
 
 // =============================================================================
