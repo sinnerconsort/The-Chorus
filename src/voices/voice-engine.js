@@ -624,6 +624,10 @@ function updateEscalation(impact) {
     setEscalation(levels[newIdx]);
 }
 
+// Draw lock — prevents auto-draws when manual draw is in progress
+let drawLock = false;
+export function setDrawLock(locked) { drawLock = locked; }
+
 /**
  * Handle card draw based on settings and impact.
  */
@@ -633,6 +637,9 @@ async function handleCardDraw(impact, themes, summary) {
     if (mode === 'manual') {
         return null;
     }
+
+    // Don't auto-draw while a manual draw is in progress
+    if (drawLock) return null;
 
     const living = getLivingVoices();
     if (living.length === 0) return null;
