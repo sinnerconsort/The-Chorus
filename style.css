@@ -73,7 +73,7 @@
    FAB (Floating Action Button)
    ============================================================================= */
 #chorus-fab {
-    position: fixed;
+    position: fixed !important;
     z-index: 9998;
     bottom: 60px;
     right: 12px;
@@ -86,7 +86,7 @@
     color: var(--chorus-gold);
     font-size: 20px;
     cursor: pointer;
-    display: flex;
+    display: flex !important;
     align-items: center;
     justify-content: center;
     transition: box-shadow 0.3s, transform 0.2s;

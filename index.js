@@ -120,10 +120,31 @@ async function initUI() {
             $(this).addClass('active');
         });
 
-        // Show/hide FAB based on viewport
-        if (window.innerWidth > 1000) {
-            $('#chorus-fab').hide();
+        // Verify FAB exists in DOM
+        const fabExists = $('#chorus-fab').length > 0;
+        const panelExists = $('#chorus-panel').length > 0;
+        toastr.info(`FAB in DOM: ${fabExists}, Panel in DOM: ${panelExists}`, 'The Chorus', { timeOut: 5000 });
+
+        // Fallback: create FAB manually if template didn't include it
+        if (!fabExists) {
+            toastr.warning('FAB missing from template, creating manually', 'The Chorus', { timeOut: 5000 });
+            $('body').append(`
+                <button id="chorus-fab" title="The Chorus">
+                    🂠
+                    <span class="chorus-fab__pip"></span>
+                </button>
+            `);
+            $('#chorus-fab').on('click', togglePanel);
         }
+
+        // Force FAB visible
+        $('#chorus-fab').css({
+            'display': 'flex',
+            'position': 'fixed',
+            'bottom': '60px',
+            'right': '12px',
+            'z-index': '9998'
+        }).show();
 
         console.log(`${LOG_PREFIX} UI initialized`);
     } catch (error) {
