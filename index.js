@@ -602,32 +602,6 @@ function getOutcomeByRelationship(voice) {
 }
 
 /**
- * Build a mini card for a spread slot.
- */
-function buildSpreadMiniCard(voice) {
-    const arc = getArcana(voice.arcana);
-    const stateClass = `chorus-mini-card--${voice.state}`;
-    const inkHeight = Math.min(voice.influence, 100);
-
-    return `
-        <div class="chorus-mini-card ${stateClass}" data-voice-id="${voice.id}">
-            <div class="chorus-mini-card__glyph">${arc.glyph}</div>
-            <div class="chorus-mini-card__name">${voice.name.toUpperCase()}</div>
-            <div class="chorus-mini-card__arcana">${arc.numeral}</div>
-            <div class="chorus-mini-card__influence">${voice.influence}</div>
-            <div class="chorus-mini-card__ink" style="
-                height: ${inkHeight}%;
-                background: linear-gradient(to top,
-                    ${arc.color}33 0%,
-                    ${arc.color}15 60%,
-                    transparent 100%
-                );
-            "></div>
-        </div>
-    `;
-}
-
-/**
  * Select voices for spread positions using influence + relationship gravity.
  * For cross spread, same voice can appear in multiple positions.
  */
@@ -639,23 +613,17 @@ function selectVoicesForSpread(spreadType) {
     const usedIds = new Set();
 
     for (const pos of positions) {
-        // Score each candidate voice for this position
         let best = null;
         let bestScore = -1;
 
         for (const voice of voices) {
             if (!allowDuplicates && usedIds.has(voice.id)) continue;
 
-            // Base score from influence
             let score = voice.influence;
-
-            // Gravity bonus: does this voice's relationship state prefer this position?
             const gravity = RELATIONSHIP_GRAVITY[voice.relationship] || [];
             if (gravity.includes(pos.key)) {
-                score += 30; // significant bonus for gravitational match
+                score += 30;
             }
-
-            // Small random factor to prevent deterministic results
             score += Math.random() * 15;
 
             if (score > bestScore) {
@@ -666,11 +634,7 @@ function selectVoicesForSpread(spreadType) {
 
         if (best) {
             const reversed = Math.random() * 100 < (extensionSettings.reversalChance || 15);
-            slots.push({
-                position: pos,
-                voice: best,
-                reversed,
-            });
+            slots.push({ position: pos, voice: best, reversed });
             usedIds.add(best.id);
         }
     }
@@ -687,9 +651,7 @@ function renderEmptySpread(spreadType) {
     $area.removeClass('chorus-spread--single chorus-spread--three chorus-spread--cross');
     $area.addClass(`chorus-spread--${spreadType}`);
 
-    const positions = SPREAD_DEFS[spreadType];
-
-    positions.forEach(pos => {
+    SPREAD_DEFS[spreadType].forEach(pos => {
         const posClass = spreadType === 'cross' ? ` chorus-slot--${pos.key}` : '';
         $area.append(`
             <div class="chorus-slot${posClass}" data-position="${pos.key}">
@@ -703,7 +665,43 @@ function renderEmptySpread(spreadType) {
 }
 
 /**
- * Render a filled spread with voice cards.
+ * Build ink bleed for spread-size cards (simplified SVG version).
+ */
+function buildSpreadInkBleed(voice, arc) {
+    const { r, g, b } = hexToRgb(arc.color);
+    const inf = voice.influence;
+
+    if (voice.state === 'dead') {
+        return `<div class="chorus-spread-card__ink" style="height:100%">
+            <div class="chorus-spread-card__ink-body" style="background:rgba(30,25,35,0.8)"></div>
+        </div>`;
+    }
+
+    return `<div class="chorus-spread-card__ink" style="height:${inf}%">
+        <svg class="chorus-spread-card__ink-wave" viewBox="0 0 100 20" preserveAspectRatio="none">
+            <defs><filter id="sib-${voice.id}"><feGaussianBlur stdDeviation="2"/></filter></defs>
+            <path d="M0,20 Q15,${8+Math.sin(inf*0.1)*5} 30,${14+Math.cos(inf*0.05)*4} T60,${12+Math.sin(inf*0.08)*3} T100,20 L100,20 L0,20 Z" fill="rgba(${r},${g},${b},0.5)" filter="url(#sib-${voice.id})"/>
+            <path d="M0,20 Q20,${11+Math.cos(inf*0.07)*3} 40,${16+Math.sin(inf*0.09)*3} T80,${14+Math.cos(inf*0.06)*4} T100,20 L100,20 L0,20 Z" fill="rgba(${r},${g},${b},0.35)"/>
+        </svg>
+        <div class="chorus-spread-card__ink-body" style="background:linear-gradient(to top,rgba(${r},${g},${b},0.6) 0%,rgba(${r},${g},${b},0.3) 60%,rgba(${r},${g},${b},0.1) 100%)"></div>
+    </div>`;
+}
+
+/**
+ * Get relationship color for display.
+ */
+function getRelationshipColor(rel) {
+    const colors = {
+        devoted: '#88aacc', protective: '#7799aa', warm: '#88aa77',
+        curious: '#aa9966', indifferent: '#666666', resentful: '#aa6644',
+        hostile: '#cc4444', obsessed: '#aa44aa', grieving: '#7777aa',
+        manic: '#ccaa33',
+    };
+    return colors[rel] || '#888888';
+}
+
+/**
+ * Render a filled spread with proper tarot-style cards.
  */
 function renderFilledSpread(reading) {
     const $area = $('#chorus-spread-area');
@@ -713,27 +711,38 @@ function renderFilledSpread(reading) {
 
     reading.slots.forEach(slot => {
         const posClass = reading.spread === 'cross' ? ` chorus-slot--${slot.position.key}` : '';
-        const reversedClass = slot.reversed ? ' chorus-mini-card--reversed' : '';
         const arc = getArcana(slot.voice.arcana);
-        const stateClass = `chorus-mini-card--${slot.voice.state}`;
-        const inkHeight = Math.min(slot.voice.influence, 100);
+        const reversedClass = slot.reversed ? ' chorus-spread-card--reversed' : '';
+        const stateClass = slot.voice.state === 'dormant' ? ' chorus-spread-card--dormant' : '';
+
+        // Dynamic border/shadow based on state
+        const borderStyle = slot.voice.state === 'agitated'
+            ? `1px solid ${arc.glow}55` : `1px solid rgba(201,168,76,0.2)`;
+        const shadow = slot.voice.state === 'agitated'
+            ? `0 0 12px ${arc.glow}33, inset 0 0 8px ${arc.glow}15`
+            : slot.voice.state === 'active'
+                ? `0 0 6px ${arc.glow}18`
+                : `0 0 5px rgba(0,0,0,0.5)`;
+        const pulse = slot.voice.state === 'agitated'
+            ? `<div class="chorus-spread-card__pulse" style="border-color:${arc.glow}"></div>` : '';
+        const relColor = getRelationshipColor(slot.voice.relationship);
 
         $area.append(`
             <div class="chorus-slot${posClass}" data-position="${slot.position.key}">
-                <div class="chorus-mini-card ${stateClass}${reversedClass}" data-voice-id="${slot.voice.id}">
-                    <div class="chorus-mini-card__glyph">${arc.glyph}</div>
-                    <div class="chorus-mini-card__name">${slot.voice.name.toUpperCase()}</div>
-                    <div class="chorus-mini-card__arcana">${arc.numeral}</div>
-                    <div class="chorus-mini-card__influence">${slot.voice.influence}</div>
-                    ${slot.reversed ? '<div class="chorus-mini-card__reversed">REVERSED</div>' : ''}
-                    <div class="chorus-mini-card__ink" style="
-                        height: ${inkHeight}%;
-                        background: linear-gradient(to top,
-                            ${arc.color}33 0%,
-                            ${arc.color}15 60%,
-                            transparent 100%
-                        );
-                    "></div>
+                <div class="chorus-spread-card${reversedClass}${stateClass}" data-voice-id="${slot.voice.id}" style="border:${borderStyle};box-shadow:${shadow}">
+                    <div class="chorus-spread-card__frame-outer"></div>
+                    <div class="chorus-spread-card__frame-inner"></div>
+                    <div class="chorus-spread-card__art" style="background:radial-gradient(circle at 50% 50%, ${arc.color}15 0%, #0a0612 70%)">
+                        <div class="chorus-spread-card__glyph">${arc.glyph}</div>
+                    </div>
+                    <div class="chorus-spread-card__name" style="text-shadow:0 0 8px ${arc.glow}33">${slot.voice.name}</div>
+                    <div class="chorus-spread-card__arcana">${arc.numeral}</div>
+                    <div class="chorus-spread-card__relationship" style="color:${relColor}">${slot.voice.relationship.toUpperCase()}</div>
+                    ${slot.reversed ? '<div class="chorus-spread-card__reversed-tag">REVERSED</div>' : ''}
+                    <div class="chorus-spread-card__influence">INF ${slot.voice.influence}</div>
+                    ${buildSpreadInkBleed(slot.voice, arc)}
+                    <div class="chorus-spread-card__scanlines"></div>
+                    ${pulse}
                 </div>
                 <div class="chorus-slot__label">${slot.position.label}</div>
             </div>
