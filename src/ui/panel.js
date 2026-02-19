@@ -195,6 +195,13 @@ export async function initUI() {
         const $container = getContainer();
         $temp.children().appendTo($container);
 
+        // Move overlays to document.body so they aren't clipped by
+        // #sheld transforms (Moonlit Echoes, mobile, etc.)
+        $('#chorus-directory-overlay').appendTo('body');
+        $('#chorus-awakening-overlay').appendTo('body');
+        $('#chorus-dissolution-overlay').appendTo('body');
+        $('#chorus-transform-overlay').appendTo('body');
+
         // Create FAB with absolute positioning
         const $fab = $(`<button id="chorus-fab" class="chorus-fab" title="The Chorus">
             <span class="chorus-fab__glyph">\u25C6</span>
@@ -318,8 +325,11 @@ export function destroyUI() {
 
     $('#chorus-panel').remove();
     $('#chorus-fab').remove();
+    // These were moved to body in initUI
+    $('#chorus-directory-overlay').remove();
     $('#chorus-awakening-overlay').remove();
     $('#chorus-dissolution-overlay').remove();
+    $('#chorus-transform-overlay').remove();
     setPanelOpen(false);
 }
 

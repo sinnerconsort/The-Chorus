@@ -3,8 +3,9 @@
  * Full tarot card rendering with canvas generative art.
  */
 
-import { getVoices, getArcana, hexToRgb, extensionSettings } from '../state.js';
+import { getVoices, getArcana, hexToRgb, extensionSettings, getVoiceById, resolveVoice, saveChatState } from '../state.js';
 import { openDirectory } from '../social/directory.js';
+import { playDissolution } from './animations.js';
 
 // =============================================================================
 // CANVAS TRACKING
@@ -266,10 +267,21 @@ export function renderDeck() {
     });
 
     // DISSOLVE buttons
-    $spread.find('.chorus-tarot__btn--dissolve').on('click', function (e) {
+    $spread.find('.chorus-tarot__btn--dissolve').on('click', async function (e) {
         e.stopPropagation();
         const voiceId = $(this).closest('.chorus-tarot').data('voice-id');
-        toastr.info(`Dissolve voice: ${voiceId}`, 'The Chorus', { timeOut: 2000 });
+        const voice = getVoiceById(voiceId);
+        if (!voice || voice.state === 'dead') return;
+
+        // Play dissolution animation
+        await playDissolution(voice, voice.resolution?.type || 'fade');
+
+        // Kill the voice in state
+        resolveVoice(voiceId, 'manual dissolution');
+        saveChatState();
+
+        // Re-render deck
+        renderDeck();
     });
 
     // Canvases
