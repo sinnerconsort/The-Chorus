@@ -396,17 +396,72 @@
 </div><!-- /chorus-panel -->
 
 <!-- Awakening Overlay (voice birth) -->
-<div class="chorus-awakening-overlay" id="chorus-awakening-overlay">
-    <div class="chorus-awakening-card" id="chorus-awakening-card">
-        <div class="chorus-scanlines"></div>
+<div class="chorus-anim-overlay chorus-anim-overlay--awakening" id="chorus-awakening-overlay">
+    <div class="chorus-anim__backdrop"></div>
+    <div class="chorus-anim__card-stage">
+        <div class="chorus-anim__particles" id="chorus-awakening-particles"></div>
+        <div class="chorus-anim__card" id="chorus-awakening-card">
+            <div class="chorus-anim__card-back">
+                <div class="chorus-anim__card-back-pattern"></div>
+            </div>
+            <div class="chorus-anim__card-front" id="chorus-awakening-front">
+                <div class="chorus-anim__card-glow" id="chorus-awakening-glow"></div>
+                <div class="chorus-anim__card-glyph" id="chorus-awakening-glyph"></div>
+                <div class="chorus-anim__card-name" id="chorus-awakening-name"></div>
+                <div class="chorus-anim__card-arcana" id="chorus-awakening-arcana"></div>
+                <div class="chorus-anim__card-depth" id="chorus-awakening-depth"></div>
+                <div class="chorus-anim__card-ink" id="chorus-awakening-ink"></div>
+                <div class="chorus-anim__scanlines"></div>
+            </div>
+        </div>
     </div>
-    <div class="chorus-awakening__label" id="chorus-awakening-label">A VOICE AWAKENS</div>
+    <div class="chorus-anim__label" id="chorus-awakening-label">A VOICE AWAKENS</div>
+    <div class="chorus-anim__subtitle" id="chorus-awakening-subtitle"></div>
 </div>
 
-<!-- Dissolution Overlay (voice death) -->
-<div class="chorus-dissolution-overlay" id="chorus-dissolution-overlay">
-    <div class="chorus-awakening-card" id="chorus-dissolution-card">
-        <div class="chorus-scanlines"></div>
+<!-- Dissolution Overlay (voice death/resolve) -->
+<div class="chorus-anim-overlay chorus-anim-overlay--dissolution" id="chorus-dissolution-overlay">
+    <div class="chorus-anim__backdrop"></div>
+    <div class="chorus-anim__card-stage">
+        <div class="chorus-anim__fragments" id="chorus-dissolution-fragments"></div>
+        <div class="chorus-anim__card" id="chorus-dissolution-card">
+            <div class="chorus-anim__card-front" id="chorus-dissolution-front">
+                <div class="chorus-anim__card-glow" id="chorus-dissolution-glow"></div>
+                <div class="chorus-anim__card-glyph" id="chorus-dissolution-glyph"></div>
+                <div class="chorus-anim__card-name" id="chorus-dissolution-name"></div>
+                <div class="chorus-anim__card-arcana" id="chorus-dissolution-arcana"></div>
+                <div class="chorus-anim__scanlines"></div>
+            </div>
+        </div>
     </div>
-    <div class="chorus-awakening__label" id="chorus-dissolution-label">A VOICE FALLS SILENT</div>
+    <div class="chorus-anim__label" id="chorus-dissolution-label">A VOICE FALLS SILENT</div>
+    <div class="chorus-anim__subtitle" id="chorus-dissolution-subtitle"></div>
+</div>
+
+<!-- Transform Overlay (death → rebirth) -->
+<div class="chorus-anim-overlay chorus-anim-overlay--transform" id="chorus-transform-overlay">
+    <div class="chorus-anim__backdrop"></div>
+    <div class="chorus-anim__card-stage">
+        <div class="chorus-anim__fragments" id="chorus-transform-fragments"></div>
+        <!-- Old card (shatters) -->
+        <div class="chorus-anim__card chorus-anim__card--old" id="chorus-transform-old">
+            <div class="chorus-anim__card-front" id="chorus-transform-old-front">
+                <div class="chorus-anim__card-glyph" id="chorus-transform-old-glyph"></div>
+                <div class="chorus-anim__card-name" id="chorus-transform-old-name"></div>
+            </div>
+        </div>
+        <!-- New card (crystallizes) -->
+        <div class="chorus-anim__card chorus-anim__card--new" id="chorus-transform-new">
+            <div class="chorus-anim__card-front" id="chorus-transform-new-front">
+                <div class="chorus-anim__card-glow" id="chorus-transform-new-glow"></div>
+                <div class="chorus-anim__card-glyph" id="chorus-transform-new-glyph"></div>
+                <div class="chorus-anim__card-name" id="chorus-transform-new-name"></div>
+                <div class="chorus-anim__card-arcana" id="chorus-transform-new-arcana"></div>
+                <div class="chorus-anim__card-depth" id="chorus-transform-new-depth"></div>
+                <div class="chorus-anim__scanlines"></div>
+            </div>
+        </div>
+    </div>
+    <div class="chorus-anim__label" id="chorus-transform-label">TRANSFORMATION</div>
+    <div class="chorus-anim__subtitle" id="chorus-transform-subtitle"></div>
 </div>

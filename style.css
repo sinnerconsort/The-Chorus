@@ -2027,95 +2027,455 @@
 
 
 /* =============================================================================
-   AWAKENING OVERLAY (full-screen voice birth)
+   ANIMATION OVERLAYS (awakening, dissolution, transformation)
    ============================================================================= */
-.chorus-awakening-overlay {
-    position: absolute;
+
+.chorus-anim-overlay {
+    position: fixed;
     top: 0;
     left: 0;
     right: 0;
     bottom: 0;
-    height: 100vh;
     z-index: 10001;
-    background: var(--chorus-bg-overlay);
     display: flex;
     align-items: center;
     justify-content: center;
     flex-direction: column;
-    gap: 20px;
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 0.8s;
-}
-
-.chorus-awakening-overlay.visible {
-    opacity: 1;
-    pointer-events: all;
-}
-
-.chorus-awakening-card {
-    width: 200px;
-    height: 310px;
-    border-radius: 10px;
-    background: var(--chorus-bg-surface);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-direction: column;
-    gap: 10px;
-    transition: all 1s var(--chorus-ease-out);
-    transform: scale(1.15);
-    opacity: 0;
-    position: relative;
-    overflow: hidden;
-}
-
-.chorus-awakening-overlay.visible .chorus-awakening-card {
-    transform: scale(1);
-    opacity: 1;
-}
-
-.chorus-awakening__label {
-    font-family: var(--chorus-font-mono);
-    font-size: 10px;
-    letter-spacing: 4px;
-    text-transform: uppercase;
-    transition: opacity 0.8s;
-}
-
-
-/* =============================================================================
-   DISSOLUTION OVERLAY (voice death)
-   ============================================================================= */
-.chorus-dissolution-overlay {
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    height: 100vh;
-    z-index: 10001;
-    background: var(--chorus-bg-overlay);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-direction: column;
-    gap: 20px;
+    gap: 16px;
     opacity: 0;
     pointer-events: none;
     transition: opacity 0.6s;
 }
 
-.chorus-dissolution-overlay.visible {
+.chorus-anim-overlay.visible {
     opacity: 1;
     pointer-events: all;
 }
 
-.chorus-dissolution-overlay.dying .chorus-awakening-card {
-    transform: scale(0.9);
-    filter: saturate(0) brightness(0.5);
-    border-color: rgba(51, 51, 51, 0.4) !important;
-    box-shadow: none !important;
+.chorus-anim__backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(4, 2, 8, 0.92);
+    backdrop-filter: blur(8px);
+}
+
+/* ── Card stage ── */
+.chorus-anim__card-stage {
+    position: relative;
+    width: 210px;
+    height: 330px;
+    z-index: 1;
+    perspective: 800px;
+}
+
+/* ── The card ── */
+.chorus-anim__card {
+    position: absolute;
+    inset: 0;
+    border-radius: 10px;
+    transform-style: preserve-3d;
+    transition: transform 1.2s var(--chorus-ease-out), opacity 0.8s, filter 0.8s;
+    opacity: 0;
+}
+
+.chorus-anim__card-back,
+.chorus-anim__card-front {
+    position: absolute;
+    inset: 0;
+    border-radius: 10px;
+    backface-visibility: hidden;
+    overflow: hidden;
+}
+
+.chorus-anim__card-back {
+    background: var(--chorus-bg-surface);
+    border: 1px solid var(--chorus-gold-dim);
+    z-index: 2;
+}
+
+.chorus-anim__card-back-pattern {
+    position: absolute;
+    inset: 8px;
+    border: 1px solid var(--chorus-gold-dim);
+    border-radius: 6px;
+    background:
+        repeating-linear-gradient(45deg, transparent, transparent 8px, rgba(201,168,76,0.04) 8px, rgba(201,168,76,0.04) 9px),
+        repeating-linear-gradient(-45deg, transparent, transparent 8px, rgba(201,168,76,0.04) 8px, rgba(201,168,76,0.04) 9px);
+}
+
+.chorus-anim__card-front {
+    background: var(--chorus-bg-surface);
+    border: 1px solid var(--chorus-gold-dim);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transform: rotateY(180deg);
+    z-index: 1;
+    transition: filter 1s, border-color 1s;
+}
+
+/* ── Card content ── */
+.chorus-anim__card-glow {
+    position: absolute;
+    inset: -40px;
+    border-radius: 50%;
+    opacity: 0;
+    transition: opacity 1.5s, transform 1.5s;
+    filter: blur(40px);
+    transform: scale(0.5);
+}
+
+.chorus-anim__card-glyph {
+    font-size: 48px;
+    opacity: 0;
+    transform: scale(0.3);
+    transition: all 0.8s var(--chorus-ease-out);
+    transition-delay: 0.3s;
+    text-shadow: 0 0 20px currentColor;
+}
+
+.chorus-anim__card-name {
+    font-family: var(--chorus-font-mono);
+    font-size: 13px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    opacity: 0;
+    transform: translateY(10px);
+    transition: all 0.6s;
+    transition-delay: 0.6s;
+    text-align: center;
+    padding: 0 12px;
+}
+
+.chorus-anim__card-arcana {
+    font-family: var(--chorus-font-mono);
+    font-size: 9px;
+    letter-spacing: 2px;
+    color: var(--chorus-gold-dim);
+    opacity: 0;
+    transition: opacity 0.6s;
+    transition-delay: 0.8s;
+}
+
+.chorus-anim__card-depth {
+    font-family: var(--chorus-font-mono);
+    font-size: 8px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    padding: 2px 8px;
+    border: 1px solid var(--chorus-gold-dim);
+    border-radius: 2px;
+    opacity: 0;
+    transition: opacity 0.5s;
+    transition-delay: 1.0s;
+}
+
+.chorus-anim__card-ink {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 0%;
+    background: linear-gradient(to top, currentColor 0%, transparent 100%);
+    opacity: 0.12;
+    transition: height 2s var(--chorus-ease-out);
+    transition-delay: 0.8s;
+}
+
+.chorus-anim__scanlines {
+    position: absolute;
+    inset: 0;
+    background: repeating-linear-gradient(
+        transparent 0px, transparent 2px,
+        rgba(0,0,0,0.08) 2px, rgba(0,0,0,0.08) 4px
+    );
+    pointer-events: none;
+    border-radius: 10px;
+}
+
+/* ── Labels ── */
+.chorus-anim__label {
+    font-family: var(--chorus-font-mono);
+    font-size: 10px;
+    letter-spacing: 5px;
+    text-transform: uppercase;
+    color: var(--chorus-gold);
+    z-index: 1;
+    opacity: 0;
+    transform: translateY(8px);
+    transition: all 0.6s;
+    transition-delay: 0.2s;
+}
+
+.chorus-anim__subtitle {
+    font-family: var(--chorus-font-mono);
+    font-size: 9px;
+    letter-spacing: 2px;
+    color: var(--chorus-text-dim);
+    z-index: 1;
+    opacity: 0;
+    transition: opacity 0.6s;
+    transition-delay: 1.2s;
+    text-align: center;
+    max-width: 280px;
+    line-height: 1.5;
+}
+
+/* ── Particles (birth) ── */
+.chorus-anim__particles {
+    position: absolute;
+    inset: -60px;
+    pointer-events: none;
+    z-index: 0;
+}
+
+.chorus-anim__particle {
+    position: absolute;
+    width: 3px;
+    height: 3px;
+    border-radius: 50%;
+    opacity: 0;
+}
+
+/* ── Fragments (death/transform) ── */
+.chorus-anim__fragments {
+    position: absolute;
+    inset: -40px;
+    pointer-events: none;
+    z-index: 3;
+}
+
+.chorus-anim__fragment {
+    position: absolute;
+    border-radius: 2px;
+    opacity: 0;
+    transition: all 1.2s var(--chorus-ease-out);
+}
+
+/* =============================================================================
+   AWAKENING PHASES
+   ============================================================================= */
+
+/* Phase 1: card back visible */
+.chorus-anim-overlay--awakening.phase-1 .chorus-anim__card {
+    transform: rotateY(0deg) scale(0.85);
+    opacity: 1;
+}
+.chorus-anim-overlay--awakening.phase-1 .chorus-anim__label {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* Phase 2: flip to front, reveal content */
+.chorus-anim-overlay--awakening.phase-2 .chorus-anim__card {
+    transform: rotateY(180deg) scale(1);
+    opacity: 1;
+}
+.chorus-anim-overlay--awakening.phase-2 .chorus-anim__card-glow {
+    opacity: 0.6;
+    transform: scale(1);
+}
+.chorus-anim-overlay--awakening.phase-2 .chorus-anim__card-glyph {
+    opacity: 1;
+    transform: scale(1);
+}
+.chorus-anim-overlay--awakening.phase-2 .chorus-anim__card-name {
+    opacity: 1;
+    transform: translateY(0);
+}
+.chorus-anim-overlay--awakening.phase-2 .chorus-anim__card-arcana { opacity: 1; }
+.chorus-anim-overlay--awakening.phase-2 .chorus-anim__card-depth { opacity: 0.7; }
+.chorus-anim-overlay--awakening.phase-2 .chorus-anim__card-ink { height: 30%; }
+.chorus-anim-overlay--awakening.phase-2 .chorus-anim__label {
+    opacity: 1;
+    transform: translateY(0);
+}
+.chorus-anim-overlay--awakening.phase-2 .chorus-anim__subtitle { opacity: 0.7; }
+
+/* Phase 3: fade out */
+.chorus-anim-overlay--awakening.phase-3 {
+    opacity: 0;
+    transition: opacity 1.0s;
+}
+
+/* =============================================================================
+   DISSOLUTION PHASES (flavored by resolution type)
+   ============================================================================= */
+
+/* Phase 1: card fully visible */
+.chorus-anim-overlay--dissolution.phase-1 .chorus-anim__card {
+    transform: rotateY(180deg) scale(1);
+    opacity: 1;
+}
+.chorus-anim-overlay--dissolution.phase-1 .chorus-anim__card-front {
+    transform: rotateY(180deg);
+}
+.chorus-anim-overlay--dissolution.phase-1 .chorus-anim__card-glow {
+    opacity: 0.4;
+    transform: scale(1);
+}
+.chorus-anim-overlay--dissolution.phase-1 .chorus-anim__card-glyph {
+    opacity: 1;
+    transform: scale(1);
+}
+.chorus-anim-overlay--dissolution.phase-1 .chorus-anim__card-name {
+    opacity: 1;
+    transform: translateY(0);
+}
+.chorus-anim-overlay--dissolution.phase-1 .chorus-anim__card-arcana { opacity: 1; }
+.chorus-anim-overlay--dissolution.phase-1 .chorus-anim__label {
+    opacity: 1;
+    transform: translateY(0);
+}
+.chorus-anim-overlay--dissolution.phase-1 .chorus-anim__subtitle { opacity: 0.7; }
+
+/* Fade: quiet dimming */
+.chorus-anim-overlay--dissolution.phase-2-fade .chorus-anim__card {
+    transform: rotateY(180deg) scale(0.95);
+    opacity: 0;
+    transition: all 2.5s;
+}
+.chorus-anim-overlay--dissolution.phase-2-fade .chorus-anim__card-glow {
+    opacity: 0;
+    transition: opacity 2s;
+}
+
+/* Heal: warm bloom then dissolve */
+.chorus-anim-overlay--dissolution.phase-2-heal .chorus-anim__card {
+    transform: rotateY(180deg) scale(1.03);
+    opacity: 0;
+    transition: all 2.5s;
+}
+.chorus-anim-overlay--dissolution.phase-2-heal .chorus-anim__card-glow {
+    opacity: 1;
+    transform: scale(1.5);
+    transition: all 2s;
+}
+.chorus-anim-overlay--dissolution.phase-2-heal .chorus-anim__card-front {
+    filter: brightness(1.8) saturate(0.3);
+    transition: filter 2s;
+}
+
+/* Confront: steady acceptance */
+.chorus-anim-overlay--dissolution.phase-2-confront .chorus-anim__card {
+    transform: rotateY(180deg) scale(1);
+    opacity: 0;
+    transition: all 2s;
+}
+.chorus-anim-overlay--dissolution.phase-2-confront .chorus-anim__card-glyph {
+    transform: scale(1.2);
+    opacity: 0;
+    transition: all 1.5s;
+}
+
+/* Witness: soft upward drift */
+.chorus-anim-overlay--dissolution.phase-2-witness .chorus-anim__card {
+    transform: rotateY(180deg) translateY(-30px) scale(0.97);
+    opacity: 0;
+    transition: all 2.5s;
+}
+
+/* Phase 3: overlay fades */
+.chorus-anim-overlay--dissolution.phase-3 {
+    opacity: 0;
+    transition: opacity 0.8s;
+}
+
+/* =============================================================================
+   TRANSFORMATION PHASES
+   ============================================================================= */
+
+/* Phase 1: old card visible */
+.chorus-anim-overlay--transform.phase-1 .chorus-anim__card--old {
+    transform: rotateY(180deg) scale(1);
+    opacity: 1;
+}
+.chorus-anim-overlay--transform.phase-1 .chorus-anim__card--old .chorus-anim__card-front {
+    transform: rotateY(180deg);
+}
+.chorus-anim-overlay--transform.phase-1 .chorus-anim__card--old .chorus-anim__card-glyph {
+    opacity: 1;
+    transform: scale(1);
+}
+.chorus-anim-overlay--transform.phase-1 .chorus-anim__card--old .chorus-anim__card-name {
+    opacity: 1;
+    transform: translateY(0);
+}
+.chorus-anim-overlay--transform.phase-1 .chorus-anim__card--new {
+    opacity: 0;
+    transform: scale(0.3);
+}
+.chorus-anim-overlay--transform.phase-1 .chorus-anim__label {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* Phase 2: old shatters */
+.chorus-anim-overlay--transform.phase-2 .chorus-anim__card--old {
+    transform: rotateY(180deg) scale(0.7);
+    opacity: 0;
+    filter: brightness(2) saturate(0);
+    transition: all 0.8s;
+}
+.chorus-anim-overlay--transform.phase-2 .chorus-anim__card--new {
+    opacity: 0;
+    transform: scale(0.3);
+}
+
+/* Phase 3: new crystallizes */
+.chorus-anim-overlay--transform.phase-3 .chorus-anim__card--old { opacity: 0; }
+.chorus-anim-overlay--transform.phase-3 .chorus-anim__card--new {
+    opacity: 1;
+    transform: rotateY(180deg) scale(1);
+    transition: all 1.2s var(--chorus-ease-out);
+}
+.chorus-anim-overlay--transform.phase-3 .chorus-anim__card--new .chorus-anim__card-front {
+    transform: rotateY(180deg);
+}
+.chorus-anim-overlay--transform.phase-3 .chorus-anim__card--new .chorus-anim__card-glow {
+    opacity: 0.6;
+    transform: scale(1);
+}
+.chorus-anim-overlay--transform.phase-3 .chorus-anim__card--new .chorus-anim__card-glyph {
+    opacity: 1;
+    transform: scale(1);
+}
+.chorus-anim-overlay--transform.phase-3 .chorus-anim__card--new .chorus-anim__card-name {
+    opacity: 1;
+    transform: translateY(0);
+}
+.chorus-anim-overlay--transform.phase-3 .chorus-anim__card--new .chorus-anim__card-arcana { opacity: 1; }
+.chorus-anim-overlay--transform.phase-3 .chorus-anim__card--new .chorus-anim__card-depth { opacity: 0.7; }
+.chorus-anim-overlay--transform.phase-3 .chorus-anim__subtitle { opacity: 0.7; }
+
+/* Phase 4: fade out */
+.chorus-anim-overlay--transform.phase-4 {
+    opacity: 0;
+    transition: opacity 1.0s;
+}
+
+/* =============================================================================
+   PARTICLE / FRAGMENT KEYFRAMES
+   ============================================================================= */
+@keyframes chorus-particle-rise {
+    0%   { opacity: 0; transform: translateY(20px) scale(0); }
+    20%  { opacity: 1; }
+    100% { opacity: 0; transform: translateY(-120px) scale(0.5); }
+}
+
+.chorus-anim__particle.active {
+    animation: chorus-particle-rise 2s var(--chorus-ease-out) forwards;
+}
+
+@keyframes chorus-fragment-scatter {
+    0%   { opacity: 1; transform: translate(0, 0) rotate(0deg) scale(1); }
+    100% { opacity: 0; transform: translate(var(--fx), var(--fy)) rotate(var(--fr)) scale(0.3); }
+}
+
+.chorus-anim__fragment.active {
+    animation: chorus-fragment-scatter 1.2s var(--chorus-ease-out) forwards;
 }
 
 

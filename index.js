@@ -32,6 +32,7 @@ import {
     decayAccumulators,
     getEscalation,
     getLivingVoices,
+    getVoiceById,
 } from './src/state.js';
 import { initUI, destroyUI, refreshUI } from './src/ui/panel.js';
 import { processMessage, initializeFirstVoice } from './src/voices/voice-engine.js';
@@ -42,6 +43,12 @@ import {
     showSidebarLoading,
     hideSidebarLoading,
 } from './src/ui/reading.js';
+import {
+    playAwakening,
+    playDissolution,
+    playTransformation,
+    isAnimating,
+} from './src/ui/animations.js';
 
 // =============================================================================
 // SETTINGS PANEL (Extensions drawer)
@@ -121,7 +128,7 @@ async function onMessageReceived() {
             hideSidebarLoading();
 
             if (firstVoice) {
-                toastr.info(`${firstVoice.name} awakens`, 'Voice Born', { timeOut: 3000 });
+                await playAwakening(firstVoice);
                 refreshUI();
             }
         }
@@ -138,12 +145,12 @@ async function onMessageReceived() {
         // Update escalation bar
         updateEscalationUI(getEscalation());
 
-        // Handle lifecycle events
-        handleLifecycleEvents(result.lifecycleEvents);
+        // Handle lifecycle events (animations)
+        await handleLifecycleEvents(result.lifecycleEvents);
 
-        // Handle new voice birth
+        // Handle new voice birth (awakening animation)
         if (result.newVoice) {
-            toastr.info(`${result.newVoice.name} awakens (${result.newVoice.depth})`, 'Voice Born', { timeOut: 4000 });
+            await playAwakening(result.newVoice);
             refreshUI();
         }
 
@@ -177,36 +184,48 @@ async function onMessageReceived() {
 }
 
 /**
- * Handle lifecycle events (resolutions, transformations, state changes).
+ * Handle lifecycle events with proper animations.
  */
-function handleLifecycleEvents(events) {
+async function handleLifecycleEvents(events) {
     if (!events || events.length === 0) return;
 
     for (const event of events) {
         switch (event.type) {
-            case 'resolved':
-                toastr.info(event.message, 'Voice Resolved', { timeOut: 5000 });
-                refreshUI();
-                break;
-
-            case 'transforming':
-                toastr.warning(event.message, 'Transformation', { timeOut: 6000 });
-                if (event.newVoice) {
-                    setTimeout(() => {
-                        toastr.info(`${event.newVoice.name} crystallizes from the fragments`, 'Voice Reborn', { timeOut: 5000 });
-                        refreshUI();
-                    }, 2000);
+            case 'resolved': {
+                // Look up the voice (still in array, just marked dead)
+                const voice = getVoiceById(event.voiceId);
+                if (voice) {
+                    await playDissolution(voice, event.resolutionType || 'fade');
                 }
-                break;
-
-            case 'fade_death':
-                toastr.info(event.message, 'Voice Faded', { timeOut: 3000 });
                 refreshUI();
                 break;
+            }
+
+            case 'transforming': {
+                // Old voice → new voice
+                const oldVoice = getVoiceById(event.voiceId);
+                if (oldVoice && event.newVoice) {
+                    await playTransformation(oldVoice, event.newVoice);
+                } else if (oldVoice) {
+                    // Transform without new voice (shouldn't happen, but safe)
+                    await playDissolution(oldVoice, 'fade');
+                }
+                refreshUI();
+                break;
+            }
+
+            case 'fade_death': {
+                const voice = getVoiceById(event.voiceId);
+                if (voice) {
+                    await playDissolution(voice, 'fade');
+                }
+                refreshUI();
+                break;
+            }
 
             case 'state_change':
+                // Subtle — no animation, no toastr. The user sees it in behavior.
                 console.log(`${LOG_PREFIX} ${event.name}: ${event.newState}`);
-                // Subtle — no toastr, just log. The user sees it in the voice's behavior.
                 break;
         }
     }
