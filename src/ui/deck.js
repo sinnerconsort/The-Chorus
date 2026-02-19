@@ -4,6 +4,7 @@
  */
 
 import { getVoices, getArcana, hexToRgb, extensionSettings } from '../state.js';
+import { openDirectory } from '../social/directory.js';
 
 // =============================================================================
 // CANVAS TRACKING
@@ -75,7 +76,7 @@ function buildTarotCard(voice) {
                 <div class="chorus-tarot__arcana-label">${arc.label}</div>
                 <div class="chorus-tarot__name" style="text-shadow:0 0 10px ${arc.glow}44">${voice.name}</div>
                 <div class="chorus-tarot__state-badge">
-                    <span class="chorus-tarot__badge chorus-tarot__badge--${voice.state}">${voice.state.toUpperCase()}</span>
+                    <span class="chorus-tarot__badge chorus-tarot__badge--${voice.state || 'active'}">${(voice.state || 'active').toUpperCase()}</span>
                 </div>
                 <div class="chorus-tarot__influence-label">${isDead ? 'SILENCED' : `INFLUENCE ${voice.influence}%`}</div>
                 ${buildInkBleed(voice, arc)}
@@ -261,7 +262,7 @@ export function renderDeck() {
     $spread.find('.chorus-tarot__btn--talk').on('click', function (e) {
         e.stopPropagation();
         const voiceId = $(this).closest('.chorus-tarot').data('voice-id');
-        toastr.info(`Talk to voice: ${voiceId}`, 'The Chorus', { timeOut: 2000 });
+        openDirectory(voiceId);
     });
 
     // DISSOLVE buttons
