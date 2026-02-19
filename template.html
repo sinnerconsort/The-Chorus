@@ -395,6 +395,42 @@
 
 </div><!-- /chorus-panel -->
 
+<!-- Directory Overlay (1-on-1 voice chat) -->
+<div class="chorus-directory-overlay" id="chorus-directory-overlay">
+    <div class="chorus-directory-panel">
+        <!-- Header -->
+        <div class="chorus-directory__header" id="chorus-directory-header">
+            <div class="chorus-directory__identity">
+                <span class="chorus-directory__glyph" id="chorus-directory-glyph"></span>
+                <div class="chorus-directory__info">
+                    <div class="chorus-directory__name" id="chorus-directory-name"></div>
+                    <div class="chorus-directory__meta">
+                        <span id="chorus-directory-arcana"></span>
+                        <span class="chorus-directory__sep">&middot;</span>
+                        <span id="chorus-directory-relationship"></span>
+                        <span class="chorus-directory__sep">&middot;</span>
+                        <span id="chorus-directory-influence"></span>
+                    </div>
+                </div>
+            </div>
+            <button class="chorus-directory__close" id="chorus-directory-close">&times;</button>
+        </div>
+
+        <!-- Chat feed -->
+        <div class="chorus-directory__feed" id="chorus-directory-feed"></div>
+
+        <!-- Input -->
+        <div class="chorus-directory__input-bar">
+            <input type="text"
+                   class="chorus-directory__input"
+                   id="chorus-directory-input"
+                   placeholder="Say something..."
+                   autocomplete="off" />
+            <button class="chorus-directory__send" id="chorus-directory-send">&rarr;</button>
+        </div>
+    </div>
+</div>
+
 <!-- Awakening Overlay (voice birth) -->
 <div class="chorus-anim-overlay chorus-anim-overlay--awakening" id="chorus-awakening-overlay">
     <div class="chorus-anim__backdrop"></div>

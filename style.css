@@ -2027,6 +2027,276 @@
 
 
 /* =============================================================================
+   DIRECTORY (1-on-1 Voice Chat)
+   ============================================================================= */
+
+.chorus-directory-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 9999;
+    background: rgba(4, 2, 8, 0.7);
+    backdrop-filter: blur(4px);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s;
+    display: flex;
+    align-items: stretch;
+    justify-content: flex-end;
+}
+
+.chorus-directory-overlay.open {
+    opacity: 1;
+    pointer-events: all;
+}
+
+.chorus-directory-panel {
+    width: min(380px, 90vw);
+    height: 100%;
+    background: var(--chorus-bg-panel, #0a0612);
+    border-left: 1px solid rgba(201, 168, 76, 0.15);
+    display: flex;
+    flex-direction: column;
+    transform: translateX(100%);
+    transition: transform 0.35s var(--chorus-ease-out);
+}
+
+.chorus-directory-overlay.open .chorus-directory-panel {
+    transform: translateX(0);
+}
+
+/* ── Header ── */
+.chorus-directory__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 16px;
+    border-bottom: 1px solid rgba(201, 168, 76, 0.15);
+    flex-shrink: 0;
+}
+
+.chorus-directory__identity {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.chorus-directory__glyph {
+    font-size: 22px;
+    text-shadow: 0 0 12px currentColor;
+}
+
+.chorus-directory__name {
+    font-family: var(--chorus-font-mono);
+    font-size: 13px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+}
+
+.chorus-directory__meta {
+    font-family: var(--chorus-font-mono);
+    font-size: 9px;
+    letter-spacing: 1px;
+    color: var(--chorus-text-dim);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-top: 2px;
+}
+
+.chorus-directory__sep {
+    opacity: 0.4;
+}
+
+.chorus-directory__close {
+    background: none;
+    border: none;
+    color: var(--chorus-text-dim);
+    font-size: 24px;
+    cursor: pointer;
+    padding: 4px 8px;
+    line-height: 1;
+    opacity: 0.6;
+    transition: opacity 0.2s;
+}
+
+.chorus-directory__close:hover {
+    opacity: 1;
+}
+
+/* ── Chat feed ── */
+.chorus-directory__feed {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(201, 168, 76, 0.2) transparent;
+}
+
+/* ── Messages ── */
+.chorus-dir-msg {
+    display: flex;
+    gap: 8px;
+    align-items: flex-start;
+    animation: chorus-dir-msg-in 0.3s var(--chorus-ease-out);
+}
+
+@keyframes chorus-dir-msg-in {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+.chorus-dir-msg--user {
+    justify-content: flex-end;
+}
+
+.chorus-dir-msg--system {
+    justify-content: center;
+}
+
+.chorus-dir-msg--system .chorus-dir-msg__text {
+    font-family: var(--chorus-font-mono);
+    font-size: 10px;
+    letter-spacing: 1px;
+    color: var(--chorus-text-dim);
+    text-align: center;
+    font-style: italic;
+}
+
+.chorus-dir-msg__glyph {
+    flex-shrink: 0;
+    font-size: 14px;
+    margin-top: 4px;
+    text-shadow: 0 0 8px currentColor;
+}
+
+.chorus-dir-msg__bubble {
+    max-width: 80%;
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+.chorus-dir-msg--voice .chorus-dir-msg__bubble {
+    background: rgba(201, 168, 76, 0.06);
+    border: 1px solid rgba(201, 168, 76, 0.1);
+    border-radius: 2px 8px 8px 8px;
+}
+
+.chorus-dir-msg--user .chorus-dir-msg__bubble {
+    background: rgba(100, 120, 180, 0.12);
+    border: 1px solid rgba(100, 120, 180, 0.15);
+    border-radius: 8px 2px 8px 8px;
+    color: var(--chorus-text);
+}
+
+.chorus-dir-msg__name {
+    font-family: var(--chorus-font-mono);
+    font-size: 9px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 3px;
+}
+
+.chorus-dir-msg__text {
+    color: var(--chorus-text);
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+/* ── Typing indicator ── */
+.chorus-dir-msg__dots {
+    display: flex;
+    gap: 4px;
+    padding: 4px 0;
+}
+
+.chorus-dir-msg__dots span {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: var(--chorus-gold-dim);
+    animation: chorus-dot-pulse 1.4s infinite;
+}
+
+.chorus-dir-msg__dots span:nth-child(2) {
+    animation-delay: 0.2s;
+}
+
+.chorus-dir-msg__dots span:nth-child(3) {
+    animation-delay: 0.4s;
+}
+
+@keyframes chorus-dot-pulse {
+    0%, 80%, 100% { opacity: 0.3; transform: scale(0.8); }
+    40% { opacity: 1; transform: scale(1); }
+}
+
+/* ── Input bar ── */
+.chorus-directory__input-bar {
+    display: flex;
+    gap: 8px;
+    padding: 12px 16px;
+    border-top: 1px solid rgba(201, 168, 76, 0.1);
+    flex-shrink: 0;
+    background: rgba(4, 2, 8, 0.5);
+}
+
+.chorus-directory__input {
+    flex: 1;
+    background: rgba(201, 168, 76, 0.04);
+    border: 1px solid rgba(201, 168, 76, 0.12);
+    border-radius: 6px;
+    padding: 8px 12px;
+    color: var(--chorus-text);
+    font-size: 13px;
+    font-family: inherit;
+    outline: none;
+    transition: border-color 0.2s;
+}
+
+.chorus-directory__input:focus {
+    border-color: rgba(201, 168, 76, 0.3);
+}
+
+.chorus-directory__input::placeholder {
+    color: var(--chorus-text-dim);
+    opacity: 0.5;
+}
+
+.chorus-directory__send {
+    width: 36px;
+    height: 36px;
+    border-radius: 6px;
+    background: rgba(201, 168, 76, 0.1);
+    border: 1px solid rgba(201, 168, 76, 0.2);
+    color: var(--chorus-gold);
+    font-size: 16px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    flex-shrink: 0;
+}
+
+.chorus-directory__send:hover {
+    background: rgba(201, 168, 76, 0.18);
+}
+
+.chorus-directory__send:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+}
+
+
+/* =============================================================================
    ANIMATION OVERLAYS (awakening, dissolution, transformation)
    ============================================================================= */
 

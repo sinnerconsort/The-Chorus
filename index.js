@@ -49,6 +49,7 @@ import {
     playTransformation,
     isAnimating,
 } from './src/ui/animations.js';
+import { initDirectory } from './src/social/directory.js';
 
 // =============================================================================
 // SETTINGS PANEL (Extensions drawer)
@@ -257,6 +258,7 @@ jQuery(async () => {
         }
 
         await initUI();
+        initDirectory();
         registerEvents();
 
         console.log(`${LOG_PREFIX} \u2705 Loaded successfully`);
