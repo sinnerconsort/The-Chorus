@@ -318,7 +318,7 @@ function parseDynamics(raw, voices) {
     const segments = raw.split(/[,;]/);
 
     for (const seg of segments) {
-        const match = seg.match(/(.+?)\s*[→->]+\s*(.+?):\s*(.+)/);
+        const match = seg.match(/(.+?)\s*(?:→|->)+\s*(.+?):\s*(.+)/);
         if (!match) continue;
 
         const fromName = match[1].trim();
