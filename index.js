@@ -81,7 +81,43 @@ async function addExtensionSettings() {
 function registerEvents() {
     eventSource.on(event_types.CHAT_CHANGED, onChatChanged);
     eventSource.on(event_types.MESSAGE_RECEIVED, onMessageReceived);
+
+    // Manual persona extraction button
+    $(document).on('click', '#chorus-btn-extract', handleManualExtract);
+
     console.log(`${LOG_PREFIX} Events registered`);
+}
+
+async function handleManualExtract() {
+    if (!hasActiveChat()) return;
+
+    const $btn = $('#chorus-btn-extract');
+    if ($btn.prop('disabled')) return;
+
+    $btn.prop('disabled', true).addClass('extracting');
+    $btn.find('.chorus-deck-action__text').text('EXTRACTING...');
+
+    try {
+        const bornVoices = await initializeFromPersona();
+
+        if (bornVoices.length > 0) {
+            for (const voice of bornVoices) {
+                await playAwakening(voice);
+                await new Promise(r => setTimeout(r, 400));
+            }
+            refreshUI();
+        } else if (getLivingVoices().length > 0) {
+            toastr.info('Voices already exist in this chat', 'The Chorus', { timeOut: 2000 });
+        } else {
+            toastr.warning('No persona data to extract from', 'The Chorus', { timeOut: 3000 });
+        }
+    } catch (e) {
+        console.error(`${LOG_PREFIX} Manual extract failed:`, e);
+        toastr.error('Extraction failed', 'The Chorus', { timeOut: 3000 });
+    } finally {
+        $btn.prop('disabled', false).removeClass('extracting');
+        $btn.find('.chorus-deck-action__text').text('EXTRACT FROM PERSONA');
+    }
 }
 
 function onChatChanged() {

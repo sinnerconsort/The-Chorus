@@ -1334,6 +1334,49 @@
     letter-spacing: 1px;
 }
 
+/* ── Deck actions ── */
+.chorus-deck-actions {
+    display: flex;
+    justify-content: center;
+    padding: 0 10px 12px;
+}
+
+.chorus-deck-action {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    border-radius: 4px;
+    background: rgba(201, 168, 76, 0.06);
+    border: 1px solid rgba(201, 168, 76, 0.15);
+    color: var(--chorus-gold-dim);
+    cursor: pointer;
+    font-family: var(--chorus-font-mono);
+    font-size: 9px;
+    letter-spacing: 2px;
+    transition: all 0.2s;
+}
+
+.chorus-deck-action:hover,
+.chorus-deck-action:active {
+    background: rgba(201, 168, 76, 0.12);
+    border-color: rgba(201, 168, 76, 0.3);
+    color: var(--chorus-gold);
+}
+
+.chorus-deck-action:disabled {
+    opacity: 0.3;
+    pointer-events: none;
+}
+
+.chorus-deck-action__icon {
+    font-size: 12px;
+}
+
+.chorus-deck-action.extracting .chorus-deck-action__icon {
+    animation: chorus-pip-pulse 1s infinite;
+}
+
 
 /* =============================================================================
    VOICE DETAIL (expandable card info in deck tab)
