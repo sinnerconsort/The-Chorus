@@ -33,6 +33,7 @@ import {
     getEscalation,
     getLivingVoices,
     getVoiceById,
+    getVoicesWithPendingDMs,
 } from './src/state.js';
 import { initUI, destroyUI, refreshUI } from './src/ui/panel.js';
 import { processMessage, initializeFromPersona } from './src/voices/voice-engine.js';
@@ -50,6 +51,7 @@ import {
     isAnimating,
 } from './src/ui/animations.js';
 import { initDirectory } from './src/social/directory.js';
+import { checkOutreach, resetOutreachCooldown } from './src/social/outreach.js';
 
 // =============================================================================
 // SETTINGS PANEL (Extensions drawer)
@@ -84,6 +86,12 @@ function registerEvents() {
 
     // Manual persona extraction button
     $(document).on('click', '#chorus-btn-extract', handleManualExtract);
+
+    // Refresh deck + outreach UI when directory closes
+    $(document).on('chorus:directoryClose', () => {
+        refreshUI();
+        updateOutreachUI();
+    });
 
     console.log(`${LOG_PREFIX} Events registered`);
 }
@@ -124,12 +132,34 @@ function onChatChanged() {
     // Load per-chat voice state from chat_metadata
     loadChatState();
 
+    // Reset outreach cooldown for new chat
+    resetOutreachCooldown();
+
     // Re-render UI with loaded state
     if (extensionSettings.enabled) {
         refreshUI();
+        updateOutreachUI();
     }
 
     console.log(`${LOG_PREFIX} Chat changed — state ${hasActiveChat() ? 'loaded' : 'cleared'}`);
+}
+
+/**
+ * Update UI indicators for pending voice DMs.
+ * - FAB pip pulses when any voice has a pending DM
+ * - Card unread badges (handled by deck.js renderDeck)
+ */
+function updateOutreachUI() {
+    const pending = getVoicesWithPendingDMs();
+    const $pip = $('.chorus-fab__pip');
+
+    if (pending.length > 0) {
+        $pip.addClass('has-dm');
+        $pip.attr('title', `${pending.length} voice${pending.length > 1 ? 's' : ''} reaching out`);
+    } else {
+        $pip.removeClass('has-dm');
+        $pip.attr('title', '');
+    }
 }
 
 async function onMessageReceived() {
@@ -227,6 +257,16 @@ async function onMessageReceived() {
         // Render card reading (single card or spread)
         if (result.cardReading) {
             renderCardReading(result.cardReading);
+        }
+
+        // Check if any voice wants to reach out via DM
+        const outreach = await checkOutreach(
+            result.classification.themes || [],
+            result.classification.impact || 'none',
+            result.classification.summary || ''
+        );
+        if (outreach) {
+            updateOutreachUI();
         }
 
         console.log(`${LOG_PREFIX} Message processed: impact=${result.classification.impact}, ${result.commentary.length} voices, ${result.lifecycleEvents.length} lifecycle events`);
