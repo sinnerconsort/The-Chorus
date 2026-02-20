@@ -121,11 +121,11 @@ function buildBirthPrompt(trigger, depth, arcanaHint = null) {
     return [
         {
             role: 'system',
-            content: `You are a creative engine generating internal voice fragments for a fictional character's psyche. Each voice is born from an extreme moment and represents a fractured piece of the character's inner world.
+            content: `You are a creative engine generating internal voice fragments for {{user}}'s psyche. Each voice is born from an extreme moment and represents a fractured piece of {{user}}'s inner world. {{user}} is the PLAYER CHARACTER described in the persona below — NOT any other character they interact with.
 
 CHAT TONE: ${toneDesc}
 
-CHARACTER PERSONA:
+{{user}}'s PERSONA:
 ${personaText || '(No persona defined — generate based on the triggering moment alone)'}
 
 EXISTING VOICES (avoid duplicates in personality or domain):
@@ -147,7 +147,8 @@ CREATIVE CONSTRAINTS:
 - Name must NOT be "The [Emotion]" — push for unexpected, specific, even mundane names. "The Accountant." "The Teeth." "The Wednesday." "Sweet Nothing." "The Flinch."
 - This voice has a verbal tic or pattern recognizable in two sentences — not just "speaks tersely" but HOW.
 - This voice is WRONG about something specific and will never admit it. What is its blind spot?
-- This voice knows it's a fragment of the character's psyche, not a whole person. How does it feel about that?
+- This voice knows it's a fragment of {{user}}'s psyche, not a whole person. How does it feel about that?
+- This voice is born from what {{user}} experiences — NOT from what other characters feel or do.
 
 RESOLUTION GUIDANCE:
 ${resolutionGuidance}
@@ -258,7 +259,7 @@ TRANSFORMATION HINT: "${transformData.hint}"
 SUGGESTED ARCANA: ${transformData.suggestedArcana || 'your choice'}
 NEW DEPTH: ${depthDef.name}
 
-CHARACTER PERSONA:
+{{user}}'s PERSONA:
 ${personaText || '(No persona defined)'}
 
 EXISTING VOICES:
@@ -267,7 +268,7 @@ ${existingVoices}
 AVAILABLE THEMES:
 ${themeList}
 
-The new voice REMEMBERS being the old one. It carries that memory. But it's different now — evolved, mutated, transformed. Generate the new voice the same way as a normal birth, but with awareness of what it used to be.
+The new voice lives inside {{user}}'s head and REMEMBERS being the old one. It carries that memory. But it's different now — evolved, mutated, transformed. Generate the new voice the same way as a normal birth, but with awareness of what it used to be.
 
 Respond ONLY with valid JSON.`,
         },
@@ -512,6 +513,8 @@ export async function birthVoicesFromPersona() {
 
 /**
  * Get scenario text from the current character card.
+ * ONLY the scenario (world/situation context), NOT the AI character's
+ * description — that describes someone else, not {{user}}.
  */
 function getScenarioText() {
     try {
@@ -522,10 +525,9 @@ function getScenarioText() {
         const char = ctx.characters?.[charId];
         if (!char) return '';
 
-        const parts = [];
-        if (char.scenario) parts.push(char.scenario);
-        if (char.description) parts.push(char.description.substring(0, 400));
-        return parts.join('\n\n').substring(0, 800);
+        // Only scenario — this is the situation {{user}} is walking into
+        // Do NOT include char.description — that's the AI character, not {{user}}
+        return (char.scenario || '').substring(0, 600);
     } catch (e) {
         return '';
     }
@@ -547,9 +549,11 @@ function buildPersonaExtractionPrompt(personaText, scenarioText, count) {
     return [
         {
             role: 'system',
-            content: `You are a psychological profiler extracting the internal voice fragments that already exist inside a fictional character's psyche BEFORE the story begins. These are not reactions to events — they are the pre-existing fractures, habits, fears, and drives that this person carries into every room.
+            content: `You are a psychological profiler extracting the internal voice fragments that already exist inside {{user}}'s psyche BEFORE the story begins.
 
-Read the character's persona card and scenario. Identify ${count} distinct psychological fragments — voices born from who this person IS, not what happens to them.
+CRITICAL: {{user}} is the PLAYER CHARACTER — the person described in the PERSONA CARD below. These voices live inside THEIR head. They are {{user}}'s intrusive thoughts, habits, fears, and drives. Do NOT create voices based on any other character in the scenario — other characters are external people {{user}} interacts with, not parts of {{user}}'s mind.
+
+These are not reactions to events — they are the pre-existing fractures that {{user}} carries into every room.
 
 CHAT TONE: ${toneDesc}
 
@@ -570,25 +574,26 @@ CREATIVE CONSTRAINTS:
 - Names must NOT be "The [Emotion]" — push for unexpected, specific, even mundane. "The Accountant." "The Teeth." "Sweet Nothing." "The Flinch."
 - Each voice needs a verbal tic recognizable in two sentences
 - Each voice is WRONG about something specific — their blind spot
-- Each voice knows it's a fragment, not a whole person — how does it feel about that?
+- Each voice knows it's a fragment of {{user}}, not a whole person — how does it feel about that?
 - NO duplicates in metaphor domain, arcana, or personality type
-- These voices should feel like they've ALWAYS been here — not freshly generated
+- These voices should feel like they've ALWAYS been inside {{user}} — not freshly generated
+- Base EVERYTHING on the persona card. If the scenario mentions other characters, those are people {{user}} knows — NOT sources for voices.
 
 Respond ONLY with a valid JSON array. No other text. No markdown fences.`,
         },
         {
             role: 'user',
-            content: `CHARACTER PERSONA:
+            content: `{{user}}'s PERSONA CARD (this is who the voices belong to):
 ${personaText || '(No persona defined)'}
 
-${scenarioText ? `SCENARIO / CHARACTER CONTEXT:\n${scenarioText}` : ''}
+${scenarioText ? `SCENARIO (the situation {{user}} is entering — for context only, do NOT base voices on other characters mentioned here):\n${scenarioText}` : ''}
 
-Extract ${count} pre-existing voice fragments from this character. What psychological pieces were already in place before the story started?
+Extract ${count} pre-existing voice fragments from {{user}}'s psyche. What psychological pieces were already in place before the story started?
 
 For each voice, consider:
-- What trait or pattern would this person carry from their background?
-- What fear, drive, or habit defines a piece of them?
-- What part of them do they not want to look at?
+- What trait or pattern would {{user}} carry from their background?
+- What fear, drive, or habit defines a piece of {{user}}?
+- What part of themselves does {{user}} not want to look at?
 
 Return this exact JSON array:
 [
