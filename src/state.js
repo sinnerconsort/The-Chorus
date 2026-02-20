@@ -52,6 +52,9 @@ const DEFAULT_CHAT_STATE = {
     deathLog: [],
     hijackLog: [],
 
+    // Council conversation history (persisted per-chat)
+    councilHistory: [],
+
     // Message counter (for draw frequency)
     messagesSinceLastDraw: 0,
 };
@@ -746,6 +749,54 @@ export function clearPendingDM(voiceId) {
  */
 export function getVoicesWithPendingDMs() {
     return getLivingVoices().filter(v => v.pendingDM !== null);
+}
+
+// =============================================================================
+// COUNCIL HISTORY HELPERS
+// =============================================================================
+
+/**
+ * Get council conversation history.
+ */
+export function getCouncilHistory() {
+    return chatState?.councilHistory || [];
+}
+
+/**
+ * Add messages to council history. Trims to last 40 messages.
+ */
+export function addCouncilMessages(messages) {
+    if (!chatState) return;
+    if (!Array.isArray(chatState.councilHistory)) chatState.councilHistory = [];
+
+    chatState.councilHistory.push(...messages);
+
+    // Trim to last 40
+    while (chatState.councilHistory.length > 40) {
+        chatState.councilHistory.shift();
+    }
+    saveChatState();
+}
+
+/**
+ * Clear council history.
+ */
+export function clearCouncilHistory() {
+    if (!chatState) return;
+    chatState.councilHistory = [];
+    saveChatState();
+}
+
+/**
+ * Update a voice's relationships map from council dynamics.
+ */
+export function updateVoiceRelationships(voiceId, relationshipUpdates) {
+    const voice = getVoiceById(voiceId);
+    if (!voice) return;
+
+    if (!voice.relationships) voice.relationships = {};
+    Object.assign(voice.relationships, relationshipUpdates);
+    saveChatState();
 }
 
 /**
