@@ -229,6 +229,14 @@ function updateDeckStats(voices) {
     $('#chorus-stat-voices').text(alive);
     $('#chorus-stat-max').text(extensionSettings.maxVoices);
     $('#chorus-stat-deaths').text(dead);
+
+    // Hide death counter when zero — looks weird on fresh chats
+    const $deathStat = $('#chorus-stat-deaths').closest('.chorus-deck-stat');
+    if (dead === 0) {
+        $deathStat.css('opacity', '0.3');
+    } else {
+        $deathStat.css('opacity', '1');
+    }
 }
 
 // =============================================================================
