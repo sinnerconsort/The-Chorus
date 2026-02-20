@@ -309,6 +309,9 @@ function sanitizeVoice(voice) {
         lastCommentary: '',
         silentStreak: 0,
 
+        // Outreach (voice-initiated DMs)
+        pendingDM: null,       // { text, trigger, timestamp } or null
+
         // Depth & lifecycle
         depth: 'rooted',           // 'surface' | 'rooted' | 'core'
         resolution: {
@@ -702,6 +705,47 @@ export function adjustInfluence(voiceId, delta) {
     if (voice.influence !== oldInfluence) {
         saveChatState();
     }
+}
+
+// =============================================================================
+// OUTREACH (voice-initiated DM) HELPERS
+// =============================================================================
+
+/**
+ * Set a pending DM on a voice. Returns true if set.
+ */
+export function setPendingDM(voiceId, text, trigger) {
+    const voice = getVoiceById(voiceId);
+    if (!voice || voice.state === 'dead') return false;
+    if (voice.pendingDM) return false; // Already has one
+
+    voice.pendingDM = {
+        text,
+        trigger,
+        timestamp: Date.now(),
+    };
+    saveChatState();
+    return true;
+}
+
+/**
+ * Clear a voice's pending DM. Returns the DM that was cleared (or null).
+ */
+export function clearPendingDM(voiceId) {
+    const voice = getVoiceById(voiceId);
+    if (!voice) return null;
+
+    const dm = voice.pendingDM;
+    voice.pendingDM = null;
+    saveChatState();
+    return dm;
+}
+
+/**
+ * Get all voices with pending DMs.
+ */
+export function getVoicesWithPendingDMs() {
+    return getLivingVoices().filter(v => v.pendingDM !== null);
 }
 
 /**
