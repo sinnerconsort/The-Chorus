@@ -212,6 +212,7 @@
         bottom: 0;
         width: 100%;
         height: 100vh;
+        height: 100dvh;
     }
 }
 
@@ -352,12 +353,14 @@
    ============================================================================= */
 .chorus-content {
     flex: 1;
+    min-height: 0;
     overflow-y: auto;
     overflow-x: hidden;
     padding: var(--chorus-panel-padding);
     scroll-behavior: smooth;
     scrollbar-width: thin;
     scrollbar-color: var(--chorus-gold-ghost) transparent;
+    -webkit-overflow-scrolling: touch;
 }
 
 .chorus-content::-webkit-scrollbar {
