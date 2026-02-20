@@ -35,7 +35,7 @@ import {
     getVoiceById,
 } from './src/state.js';
 import { initUI, destroyUI, refreshUI } from './src/ui/panel.js';
-import { processMessage, initializeFirstVoice } from './src/voices/voice-engine.js';
+import { processMessage, initializeFromPersona } from './src/voices/voice-engine.js';
 import {
     renderSidebarCommentary,
     renderCardReading,
@@ -100,17 +100,6 @@ async function onMessageReceived() {
     if (!hasActiveChat()) return;
     if (!extensionSettings.enabled) return;
 
-    // Increment draw counter
-    const count = incrementMessageCounter();
-
-    // Apply natural influence decay if enabled
-    if (extensionSettings.naturalDecay) {
-        decayAllInfluence(1);
-    }
-
-    // Decay accumulators slightly (natural cooldown)
-    decayAccumulators(2);
-
     // Get the last message text
     const ctx = getContext();
     const chat = ctx.chat || [];
@@ -120,20 +109,47 @@ async function onMessageReceived() {
     const messageText = lastMsg.mes || '';
     if (messageText.trim().length < 10) return;
 
-    try {
-        // First voice from persona (if no voices exist yet)
-        const living = getLivingVoices();
-        if (living.length === 0) {
+    // ── Persona extraction (first message only) ──
+    const living = getLivingVoices();
+    if (living.length === 0) {
+        try {
             showSidebarLoading();
-            const firstVoice = await initializeFirstVoice();
+            const bornVoices = await initializeFromPersona();
             hideSidebarLoading();
 
-            if (firstVoice) {
-                await playAwakening(firstVoice);
+            if (bornVoices.length > 0) {
+                // Staggered awakenings — brief pause between each
+                for (const voice of bornVoices) {
+                    await playAwakening(voice);
+                    // Small breath between cards
+                    await new Promise(r => setTimeout(r, 400));
+                }
                 refreshUI();
             }
+        } catch (e) {
+            hideSidebarLoading();
+            console.error(`${LOG_PREFIX} Persona extraction error:`, e);
         }
 
+        // Skip processing the intro message — it's usually just a greeting
+        // and the voices were just born, they have nothing to react to yet
+        console.log(`${LOG_PREFIX} Intro message — skipping pipeline (${getLivingVoices().length} voices seeded)`);
+        return;
+    }
+
+    // ── Normal message processing ──
+    // Increment draw counter
+    incrementMessageCounter();
+
+    // Apply natural influence decay if enabled
+    if (extensionSettings.naturalDecay) {
+        decayAllInfluence(1);
+    }
+
+    // Decay accumulators slightly (natural cooldown)
+    decayAccumulators(2);
+
+    try {
         // Show loading indicator
         showSidebarLoading();
 
@@ -160,7 +176,7 @@ async function onMessageReceived() {
             renderSidebarCommentary([{
                 voiceId: '_narrator',
                 name: 'Narrator',
-                arcana: 'world',  // Use world arcana glyph for narrator
+                arcana: 'world',
                 relationship: 'narrator',
                 text: result.narrator,
                 isNarrator: true,
