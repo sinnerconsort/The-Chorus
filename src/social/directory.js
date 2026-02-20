@@ -28,6 +28,7 @@ import {
     getArcana,
     updateVoice,
     adjustInfluence,
+    clearPendingDM,
     saveChatState,
 } from '../state.js';
 
@@ -372,6 +373,20 @@ export function openDirectory(voiceId) {
     // Load history
     renderHistory(voice);
 
+    // Handle pending DM — voice reached out first
+    const dm = clearPendingDM(voiceId);
+    if (dm) {
+        // Store in history so it persists
+        const history = voice.directoryHistory || [];
+        history.push({ role: 'assistant', content: dm.text, timestamp: dm.timestamp });
+        updateVoice(voiceId, { directoryHistory: history });
+
+        // Render the DM as a voice message
+        appendMessage('assistant', dm.text, voice);
+
+        console.log(`${LOG_PREFIX} Directory: ${voice.name}'s pending DM delivered (trigger: ${dm.trigger})`);
+    }
+
     // Show overlay
     $overlay.addClass('open');
 }
@@ -386,6 +401,9 @@ export function closeDirectory() {
     $('#chorus-directory-input').blur();
     const $overlay = $('#chorus-directory-overlay');
     $overlay.removeClass('open');
+
+    // Notify index.js to refresh deck + outreach UI
+    $(document).trigger('chorus:directoryClose');
 }
 
 /**
