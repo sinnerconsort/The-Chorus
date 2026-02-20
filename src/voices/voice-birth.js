@@ -73,9 +73,58 @@ async function sendRequest(messages, maxTokens = 800) {
 
 function getPersonaText() {
     const ctx = getContext();
-    if (ctx.userPersona) return ctx.userPersona;
+    const candidates = [];
+
+    // Try multiple paths — ST stores persona in different places
+    // depending on version, config, and how persona was set
+
+    // 1. Direct userPersona (newer ST)
+    if (ctx.userPersona) candidates.push(ctx.userPersona);
+
+    // 2. Extension settings persona (persona management)
     const persona = ctx.extensionSettings?.persona;
-    if (persona?.description) return persona.description;
+    if (persona?.description) candidates.push(persona.description);
+
+    // 3. Read directly from ST's persona description textarea (most reliable fallback)
+    try {
+        const $desc = $('#persona_description');
+        if ($desc.length && $desc.val()) {
+            candidates.push($desc.val());
+        }
+    } catch (e) { /* jQuery not available or element not found */ }
+
+    // 4. Check power_user if exposed globally
+    if (typeof window !== 'undefined') {
+        const pu = window.power_user;
+        if (pu?.persona_description) candidates.push(pu.persona_description);
+    }
+
+    // 5. Check for persona data in power_user personas map
+    if (typeof window !== 'undefined') {
+        const pu = window.power_user;
+        if (pu?.personas && pu?.persona_selected) {
+            const selected = pu.personas[pu.persona_selected];
+            if (selected) candidates.push(selected);
+        }
+    }
+
+    // Pick the longest non-trivial candidate
+    const best = candidates
+        .filter(c => typeof c === 'string' && c.trim().length > 5)
+        .sort((a, b) => b.length - a.length)[0];
+
+    if (best) {
+        console.log(`${LOG_PREFIX} Persona found (${best.length} chars, first 60: "${best.substring(0, 60)}...")`);
+        return best;
+    }
+
+    // Last resort: build from name1
+    if (ctx.name1 && ctx.name1 !== 'You' && ctx.name1.length > 1) {
+        console.log(`${LOG_PREFIX} No persona text found, using name1: "${ctx.name1}"`);
+        return `Character name: ${ctx.name1}`;
+    }
+
+    console.warn(`${LOG_PREFIX} No persona text found from any source`);
     return '';
 }
 
@@ -586,6 +635,8 @@ Respond ONLY with a valid JSON array. No other text. No markdown fences.`,
             content: `{{user}}'s PERSONA CARD (this is who the voices belong to):
 ${personaText || '(No persona defined)'}
 
+NOTE ON FORMAT: The persona above may be in ANY format — plain text, W++ (personality=["trait"]), JSON, boostyle, SBF, or Ali:Chat. It might be a paragraph, a list of traits, or bracketed attributes. Read it regardless of format and extract the psychological content. Even short or sparse personas contain enough for voice fragments — a name and a few traits imply a whole person.
+
 ${scenarioText ? `SCENARIO (the situation {{user}} is entering — for context only, do NOT base voices on other characters mentioned here):\n${scenarioText}` : ''}
 
 Extract ${count} pre-existing voice fragments from {{user}}'s psyche. What psychological pieces were already in place before the story started?
@@ -594,6 +645,7 @@ For each voice, consider:
 - What trait or pattern would {{user}} carry from their background?
 - What fear, drive, or habit defines a piece of {{user}}?
 - What part of themselves does {{user}} not want to look at?
+- Even minimal personas have implications: a name implies a history, a trait implies its shadow, a role implies its cost.
 
 Return this exact JSON array:
 [
