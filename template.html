@@ -120,24 +120,27 @@
         <!-- ============ COUNCIL TAB ============ -->
         <div class="chorus-page" id="chorus-page-council">
 
-            <div class="chorus-sec-title">THE COUNCIL</div>
-            <div class="chorus-sec-sub">Your voices in conversation</div>
-
             <!-- Active voice pips -->
             <div class="chorus-council-pips" id="chorus-council-pips">
                 <!-- Pips injected here by JS -->
             </div>
 
-            <!-- Council messages -->
-            <div class="chorus-card" id="chorus-council-messages">
-                <!-- Council messages injected here by JS -->
+            <!-- Council message feed -->
+            <div class="chorus-council-feed" id="chorus-council-messages">
+                <div class="chorus-council-empty">
+                    <div class="chorus-council-empty__glyph">◇</div>
+                    <div class="chorus-council-empty__text">Open this tab to convene the council</div>
+                </div>
             </div>
 
             <!-- Council input -->
             <div class="chorus-council-input">
-                <div class="chorus-council-input__label">YOUR RESPONSE</div>
                 <textarea class="chorus-council-input__field" id="chorus-council-input"
                     placeholder="Speak to the council..." rows="2"></textarea>
+                <div class="chorus-council-input__actions">
+                    <button class="chorus-council-input__send" id="chorus-council-send" title="Send">▸</button>
+                    <button class="chorus-council-input__clear" id="chorus-council-clear" title="Clear history">✕</button>
+                </div>
             </div>
 
         </div>

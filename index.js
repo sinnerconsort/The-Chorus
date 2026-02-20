@@ -52,6 +52,7 @@ import {
 } from './src/ui/animations.js';
 import { initDirectory } from './src/social/directory.js';
 import { checkOutreach, resetOutreachCooldown } from './src/social/outreach.js';
+import { initCouncil, resetCouncil } from './src/social/council.js';
 
 // =============================================================================
 // SETTINGS PANEL (Extensions drawer)
@@ -134,6 +135,9 @@ function onChatChanged() {
 
     // Reset outreach cooldown for new chat
     resetOutreachCooldown();
+
+    // Reset council state for new chat
+    resetCouncil();
 
     // Re-render UI with loaded state
     if (extensionSettings.enabled) {
@@ -351,6 +355,7 @@ jQuery(async () => {
 
         await initUI();
         initDirectory();
+        initCouncil();
         registerEvents();
 
         console.log(`${LOG_PREFIX} \u2705 Loaded successfully`);
