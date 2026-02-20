@@ -8,6 +8,7 @@ import { EXTENSION_NAME, LOG_PREFIX, TONE_ANCHORS } from '../config.js';
 import { extensionSettings, getContainer, panelOpen, setPanelOpen, saveSettings } from '../state.js';
 import { renderDeck, cleanupCanvases } from './deck.js';
 import { initReadingTab, clearSidebar } from './reading.js';
+import { activateCouncil, deactivateCouncil } from '../social/council.js';
 
 // =============================================================================
 // PANEL TOGGLE
@@ -25,14 +26,24 @@ export function togglePanel(forceState) {
         panel.removeClass('open');
         setPanelOpen(false);
         $('#chorus-fab').removeClass('chorus-fab--active');
+        // Deactivate council when panel closes
+        deactivateCouncil();
     }
 }
+
+// Track active tab for lifecycle
+let currentTab = 'reading';
 
 // =============================================================================
 // TAB SWITCHING
 // =============================================================================
 
 function switchTab(tabName) {
+    // Deactivate previous tab
+    if (currentTab === 'council') {
+        deactivateCouncil();
+    }
+
     $('.chorus-tabs__btn').removeClass('active');
     $(`.chorus-tabs__btn[data-tab="${tabName}"]`).addClass('active');
 
@@ -40,6 +51,12 @@ function switchTab(tabName) {
     $(`#chorus-page-${tabName}`).addClass('active');
 
     $('.chorus-content').scrollTop(0);
+
+    // Activate new tab
+    currentTab = tabName;
+    if (tabName === 'council') {
+        activateCouncil();
+    }
 }
 
 // =============================================================================
