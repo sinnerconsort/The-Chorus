@@ -1740,6 +1740,93 @@
     font-style: italic;
 }
 
+.chorus-council-input__actions {
+    display: flex;
+    gap: 6px;
+    margin-top: 6px;
+    justify-content: flex-end;
+}
+
+.chorus-council-input__send,
+.chorus-council-input__clear {
+    background: rgba(201, 168, 76, 0.08) !important;
+    border: 1px solid rgba(201, 168, 76, 0.15) !important;
+    color: #c9a84c !important;
+    font-size: 14px;
+    width: 32px;
+    height: 32px;
+    border-radius: 4px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    margin: 0;
+    box-shadow: none;
+    outline: none;
+    -webkit-appearance: none;
+    appearance: none;
+}
+
+.chorus-council-input__clear {
+    color: #883333 !important;
+    border-color: rgba(136, 51, 51, 0.15) !important;
+    background: rgba(136, 51, 51, 0.08) !important;
+    font-size: 12px;
+}
+
+.chorus-council-input__send:active,
+.chorus-council-input__clear:active {
+    filter: brightness(1.4);
+}
+
+/* Council feed */
+.chorus-council-feed {
+    flex: 1;
+    min-height: 120px;
+    max-height: 50vh;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding: 8px 4px;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(201, 168, 76, 0.1) transparent;
+}
+
+.chorus-council-empty {
+    text-align: center;
+    padding: 30px 16px;
+}
+
+.chorus-council-empty__glyph {
+    font-size: 24px;
+    color: rgba(201, 168, 76, 0.15);
+    margin-bottom: 8px;
+}
+
+.chorus-council-empty__text {
+    font-family: 'EB Garamond', serif;
+    font-size: 12px;
+    color: rgba(201, 168, 76, 0.25);
+    font-style: italic;
+}
+
+/* Council user message */
+.chorus-council-msg--user {
+    background: rgba(201, 168, 76, 0.04);
+    border-left-color: rgba(201, 168, 76, 0.2);
+    padding: 6px 10px;
+    border-radius: 4px;
+}
+
+.chorus-council-msg--user .chorus-council-msg__name {
+    color: #c9a84c;
+}
+
+.chorus-council-msg--user .chorus-council-msg__text {
+    font-style: normal;
+    color: rgba(201, 168, 76, 0.7);
+}
+
 
 /* =============================================================================
    LOG (Chronicle — birth/death/hijack history)
@@ -2918,11 +3005,18 @@
 .chorus-chat-voice--narrator {
     border-left-color: #c9a84c44;
     background: rgba(201, 168, 76, 0.03);
+    border-left-style: dotted;
+    margin-bottom: 2px;
 }
 
 .chorus-chat-voice--narrator .chorus-chat-voice__text {
     color: #c9a84ccc;
     font-style: italic;
+}
+
+.chorus-chat-voice--narrator .chorus-chat-voice__name {
+    font-variant: small-caps;
+    letter-spacing: 2px;
 }
 
 .chorus-chat-voice__glyph {
