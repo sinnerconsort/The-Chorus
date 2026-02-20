@@ -2028,23 +2028,20 @@
 
 /* =============================================================================
    DIRECTORY (1-on-1 Voice Chat)
+   Full-screen takeover on mobile. All critical colors hardcoded.
    ============================================================================= */
 
 .chorus-directory-overlay {
     position: fixed;
     top: 0;
     left: 0;
-    right: 0;
-    bottom: 0;
-    z-index: 9999;
-    background: rgba(4, 2, 8, 0.7);
-    backdrop-filter: blur(4px);
+    width: 100vw;
+    height: 100vh;
+    height: 100dvh;
+    z-index: 10002;
     opacity: 0;
     pointer-events: none;
-    transition: opacity 0.3s;
-    display: flex;
-    align-items: stretch;
-    justify-content: flex-end;
+    transition: opacity 0.25s;
 }
 
 .chorus-directory-overlay.open {
@@ -2053,14 +2050,17 @@
 }
 
 .chorus-directory-panel {
-    width: min(380px, 90vw);
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 100%;
     height: 100%;
-    background: var(--chorus-bg-panel, #0a0612);
-    border-left: 1px solid rgba(201, 168, 76, 0.15);
+    background: #0a0612;
     display: flex;
     flex-direction: column;
+    overflow: hidden;
     transform: translateX(100%);
-    transition: transform 0.35s var(--chorus-ease-out);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .chorus-directory-overlay.open .chorus-directory-panel {
@@ -2072,34 +2072,46 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 14px 16px;
+    padding: 12px 16px;
+    background: #080410;
     border-bottom: 1px solid rgba(201, 168, 76, 0.15);
     flex-shrink: 0;
+    min-height: 54px;
 }
 
 .chorus-directory__identity {
     display: flex;
     align-items: center;
     gap: 10px;
+    min-width: 0;
+    flex: 1;
 }
 
 .chorus-directory__glyph {
     font-size: 22px;
     text-shadow: 0 0 12px currentColor;
+    flex-shrink: 0;
+}
+
+.chorus-directory__info {
+    min-width: 0;
 }
 
 .chorus-directory__name {
-    font-family: var(--chorus-font-mono);
+    font-family: var(--chorus-font-mono, 'Courier New', monospace);
     font-size: 13px;
     letter-spacing: 2px;
     text-transform: uppercase;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .chorus-directory__meta {
-    font-family: var(--chorus-font-mono);
+    font-family: var(--chorus-font-mono, 'Courier New', monospace);
     font-size: 9px;
     letter-spacing: 1px;
-    color: var(--chorus-text-dim);
+    color: #a09880;
     display: flex;
     align-items: center;
     gap: 4px;
@@ -2112,30 +2124,36 @@
 
 .chorus-directory__close {
     background: none;
-    border: none;
-    color: var(--chorus-text-dim);
-    font-size: 24px;
+    border: 1px solid rgba(201, 168, 76, 0.2);
+    border-radius: 4px;
+    color: #a09880;
+    font-size: 20px;
     cursor: pointer;
-    padding: 4px 8px;
+    padding: 2px 10px;
     line-height: 1;
-    opacity: 0.6;
-    transition: opacity 0.2s;
+    flex-shrink: 0;
+    transition: opacity 0.2s, border-color 0.2s;
 }
 
-.chorus-directory__close:hover {
-    opacity: 1;
+.chorus-directory__close:hover,
+.chorus-directory__close:active {
+    border-color: rgba(201, 168, 76, 0.5);
+    color: #e8d5b0;
 }
 
 /* ── Chat feed ── */
 .chorus-directory__feed {
     flex: 1;
     overflow-y: auto;
+    overflow-x: hidden;
     padding: 16px;
     display: flex;
     flex-direction: column;
     gap: 12px;
+    background: #0d0816;
+    -webkit-overflow-scrolling: touch;
     scrollbar-width: thin;
-    scrollbar-color: rgba(201, 168, 76, 0.2) transparent;
+    scrollbar-color: rgba(201, 168, 76, 0.15) transparent;
 }
 
 /* ── Messages ── */
@@ -2143,7 +2161,7 @@
     display: flex;
     gap: 8px;
     align-items: flex-start;
-    animation: chorus-dir-msg-in 0.3s var(--chorus-ease-out);
+    animation: chorus-dir-msg-in 0.3s ease-out;
 }
 
 @keyframes chorus-dir-msg-in {
@@ -2157,13 +2175,14 @@
 
 .chorus-dir-msg--system {
     justify-content: center;
+    padding: 20px 0;
 }
 
 .chorus-dir-msg--system .chorus-dir-msg__text {
-    font-family: var(--chorus-font-mono);
+    font-family: var(--chorus-font-mono, 'Courier New', monospace);
     font-size: 10px;
     letter-spacing: 1px;
-    color: var(--chorus-text-dim);
+    color: #a09880;
     text-align: center;
     font-style: italic;
 }
@@ -2176,28 +2195,27 @@
 }
 
 .chorus-dir-msg__bubble {
-    max-width: 80%;
-    padding: 8px 12px;
+    max-width: 82%;
+    padding: 10px 14px;
     border-radius: 8px;
     font-size: 13px;
-    line-height: 1.5;
+    line-height: 1.55;
 }
 
 .chorus-dir-msg--voice .chorus-dir-msg__bubble {
     background: rgba(201, 168, 76, 0.06);
-    border: 1px solid rgba(201, 168, 76, 0.1);
-    border-radius: 2px 8px 8px 8px;
+    border: 1px solid rgba(201, 168, 76, 0.12);
+    border-radius: 2px 10px 10px 10px;
 }
 
 .chorus-dir-msg--user .chorus-dir-msg__bubble {
     background: rgba(100, 120, 180, 0.12);
     border: 1px solid rgba(100, 120, 180, 0.15);
-    border-radius: 8px 2px 8px 8px;
-    color: var(--chorus-text);
+    border-radius: 10px 2px 10px 10px;
 }
 
 .chorus-dir-msg__name {
-    font-family: var(--chorus-font-mono);
+    font-family: var(--chorus-font-mono, 'Courier New', monospace);
     font-size: 9px;
     letter-spacing: 2px;
     text-transform: uppercase;
@@ -2205,7 +2223,7 @@
 }
 
 .chorus-dir-msg__text {
-    color: var(--chorus-text);
+    color: #e8d5b0;
     white-space: pre-wrap;
     word-break: break-word;
 }
@@ -2221,17 +2239,12 @@
     width: 5px;
     height: 5px;
     border-radius: 50%;
-    background: var(--chorus-gold-dim);
+    background: #c9a84c88;
     animation: chorus-dot-pulse 1.4s infinite;
 }
 
-.chorus-dir-msg__dots span:nth-child(2) {
-    animation-delay: 0.2s;
-}
-
-.chorus-dir-msg__dots span:nth-child(3) {
-    animation-delay: 0.4s;
-}
+.chorus-dir-msg__dots span:nth-child(2) { animation-delay: 0.2s; }
+.chorus-dir-msg__dots span:nth-child(3) { animation-delay: 0.4s; }
 
 @keyframes chorus-dot-pulse {
     0%, 80%, 100% { opacity: 0.3; transform: scale(0.8); }
@@ -2242,57 +2255,64 @@
 .chorus-directory__input-bar {
     display: flex;
     gap: 8px;
-    padding: 12px 16px;
-    border-top: 1px solid rgba(201, 168, 76, 0.1);
+    padding: 10px 14px;
+    padding-bottom: max(10px, env(safe-area-inset-bottom));
+    border-top: 1px solid rgba(201, 168, 76, 0.12);
     flex-shrink: 0;
-    background: rgba(4, 2, 8, 0.5);
+    background: #080410;
 }
 
 .chorus-directory__input {
     flex: 1;
+    min-width: 0;
     background: rgba(201, 168, 76, 0.04);
-    border: 1px solid rgba(201, 168, 76, 0.12);
+    border: 1px solid rgba(201, 168, 76, 0.15);
     border-radius: 6px;
-    padding: 8px 12px;
-    color: var(--chorus-text);
-    font-size: 13px;
+    padding: 10px 12px;
+    color: #e8d5b0;
+    font-size: 14px;
     font-family: inherit;
     outline: none;
     transition: border-color 0.2s;
+    -webkit-appearance: none;
+    appearance: none;
 }
 
 .chorus-directory__input:focus {
-    border-color: rgba(201, 168, 76, 0.3);
+    border-color: rgba(201, 168, 76, 0.35);
 }
 
 .chorus-directory__input::placeholder {
-    color: var(--chorus-text-dim);
+    color: #a09880;
     opacity: 0.5;
 }
 
 .chorus-directory__send {
-    width: 36px;
-    height: 36px;
+    width: 40px;
+    height: 40px;
     border-radius: 6px;
     background: rgba(201, 168, 76, 0.1);
     border: 1px solid rgba(201, 168, 76, 0.2);
-    color: var(--chorus-gold);
-    font-size: 16px;
+    color: #c9a84c;
+    font-size: 18px;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: all 0.2s;
     flex-shrink: 0;
+    transition: background 0.2s;
+    -webkit-appearance: none;
+    appearance: none;
 }
 
-.chorus-directory__send:hover {
-    background: rgba(201, 168, 76, 0.18);
+.chorus-directory__send:hover,
+.chorus-directory__send:active {
+    background: rgba(201, 168, 76, 0.2);
 }
 
 .chorus-directory__send:disabled {
     opacity: 0.3;
-    cursor: not-allowed;
+    pointer-events: none;
 }
 
 
@@ -2304,8 +2324,9 @@
     position: fixed;
     top: 0;
     left: 0;
-    right: 0;
-    bottom: 0;
+    width: 100vw;
+    height: 100vh;
+    height: 100dvh;
     z-index: 10001;
     display: flex;
     align-items: center;
@@ -2325,8 +2346,7 @@
 .chorus-anim__backdrop {
     position: absolute;
     inset: 0;
-    background: rgba(4, 2, 8, 0.92);
-    backdrop-filter: blur(8px);
+    background: rgba(4, 2, 8, 0.95);
 }
 
 /* ── Card stage ── */
