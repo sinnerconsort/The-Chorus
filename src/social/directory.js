@@ -373,11 +373,6 @@ export function openDirectory(voiceId) {
 
     // Show overlay
     $overlay.addClass('open');
-
-    // Focus input
-    setTimeout(() => {
-        $('#chorus-directory-input').focus();
-    }, 400);
 }
 
 /**
@@ -386,6 +381,8 @@ export function openDirectory(voiceId) {
 export function closeDirectory() {
     activeVoiceId = null;
     isOpen = false;
+    // Blur input to dismiss mobile keyboard
+    $('#chorus-directory-input').blur();
     const $overlay = $('#chorus-directory-overlay');
     $overlay.removeClass('open');
 }
