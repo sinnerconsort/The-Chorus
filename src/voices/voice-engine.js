@@ -35,7 +35,7 @@ import {
     selectForSpread,
     calculateInfluenceDeltas,
 } from './participation.js';
-import { birthVoiceFromEvent, birthVoiceFromPersona } from './voice-birth.js';
+import { birthVoiceFromEvent, birthVoicesFromPersona } from './voice-birth.js';
 import { processLifecycle, completeTransformation } from './voice-lifecycle.js';
 import { tryAmbientNarration, narrateBirth, narrateDeath } from './narrator.js';
 
@@ -583,16 +583,21 @@ async function checkBirth(impact, themes, summary, messageText) {
  * Initialize the first voice from persona card.
  * Called once on first message in a new chat.
  */
-export async function initializeFirstVoice() {
+/**
+ * Extract initial voice set from the user's persona card + scenario.
+ * Called once when a new chat starts. Returns array of born voices.
+ * @returns {Object[]} Array of born voices
+ */
+export async function initializeFromPersona() {
     const living = getLivingVoices();
-    if (living.length > 0) return null; // Already have voices
+    if (living.length > 0) return []; // Already have voices
 
     try {
-        const voice = await birthVoiceFromPersona();
-        return voice;
+        const voices = await birthVoicesFromPersona();
+        return voices || [];
     } catch (e) {
-        console.error(`${LOG_PREFIX} First voice birth failed:`, e);
-        return null;
+        console.error(`${LOG_PREFIX} Persona extraction failed:`, e);
+        return [];
     }
 }
 

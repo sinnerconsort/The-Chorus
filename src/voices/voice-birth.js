@@ -437,21 +437,302 @@ export async function birthVoiceFromEvent(trigger, impact, themes = []) {
 }
 
 /**
- * Birth the first voice from the user's persona card.
- * Called once when a new chat starts.
- * @returns {Object|null} The first voice
+ * Birth the initial voice set from the user's persona card + scenario.
+ * Called once when a new chat starts. Single AI call returns 2-4 voice seeds
+ * at varying depths based on character history, traits, and situation.
+ *
+ * @returns {Object[]} Array of born voices (may be empty on failure)
  */
-export async function birthVoiceFromPersona() {
+export async function birthVoicesFromPersona() {
     const personaText = getPersonaText();
-    if (!personaText || personaText.length < 20) {
-        console.log(`${LOG_PREFIX} No persona text available for initial voice`);
-        return null;
+    const scenarioText = getScenarioText();
+
+    if ((!personaText || personaText.length < 20) && (!scenarioText || scenarioText.length < 20)) {
+        console.log(`${LOG_PREFIX} No persona/scenario text available for initial voices`);
+        return [];
     }
 
-    // First voice is always rooted — born from who you ARE
-    const trigger = `Reading the character's persona card at the start of a new story:\n\n${personaText.substring(0, 600)}`;
+    const living = getLivingVoices();
+    if (living.length > 0) return []; // Already seeded
 
-    return await birthVoiceFromEvent(trigger, 'significant', []);
+    const maxSlots = extensionSettings.maxVoices || 7;
+    const seedCount = Math.min(4, Math.max(2, Math.floor(maxSlots / 2)));
+
+    console.log(`${LOG_PREFIX} Extracting ${seedCount} initial voices from persona + scenario`);
+
+    try {
+        const messages = buildPersonaExtractionPrompt(personaText, scenarioText, seedCount);
+        const responseText = await sendRequest(messages, 1500);
+        const voices = parsePersonaExtractionResponse(responseText, seedCount);
+
+        if (!voices || voices.length === 0) {
+            console.warn(`${LOG_PREFIX} Persona extraction returned no voices`);
+            return [];
+        }
+
+        const ctx = getContext();
+        const chat = ctx.chat || [];
+        const born = [];
+
+        for (const seed of voices) {
+            // Check deck space
+            if (getLivingVoices().length >= maxSlots) break;
+
+            const depth = seed._depth || 'rooted';
+            const birthMoment = seed._birthMoment || 'Born from who you are before the story began.';
+            const depthDef = VOICE_DEPTH[depth] || VOICE_DEPTH.rooted;
+
+            // Strip temp fields
+            delete seed._depth;
+            delete seed._birthMoment;
+
+            const voice = addVoice({
+                ...seed,
+                birthMoment,
+                birthMessageId: Math.max(0, chat.length - 1),
+                influence: depthDef.defaultInfluence,
+                state: 'active',
+                depth,
+            });
+
+            if (voice) {
+                console.log(`${LOG_PREFIX} Persona voice born: ${voice.name} (${voice.arcana}, ${voice.depth})`);
+                born.push(voice);
+            }
+        }
+
+        saveChatState();
+        return born;
+
+    } catch (e) {
+        console.error(`${LOG_PREFIX} Persona extraction failed:`, e);
+        return [];
+    }
+}
+
+/**
+ * Get scenario text from the current character card.
+ */
+function getScenarioText() {
+    try {
+        const ctx = getContext();
+        const charId = ctx.characterId;
+        if (charId === undefined || charId === null) return '';
+
+        const char = ctx.characters?.[charId];
+        if (!char) return '';
+
+        const parts = [];
+        if (char.scenario) parts.push(char.scenario);
+        if (char.description) parts.push(char.description.substring(0, 400));
+        return parts.join('\n\n').substring(0, 800);
+    } catch (e) {
+        return '';
+    }
+}
+
+/**
+ * Build prompt for multi-voice persona extraction.
+ */
+function buildPersonaExtractionPrompt(personaText, scenarioText, count) {
+    const toneDesc = getToneDescription();
+
+    const themeList = [
+        `EMOTIONAL: ${THEMES.emotional.join(', ')}`,
+        `RELATIONAL: ${THEMES.relational.join(', ')}`,
+        `PHYSICAL: ${THEMES.physical.join(', ')}`,
+        `IDENTITY: ${THEMES.identity.join(', ')}`,
+    ].join('\n');
+
+    return [
+        {
+            role: 'system',
+            content: `You are a psychological profiler extracting the internal voice fragments that already exist inside a fictional character's psyche BEFORE the story begins. These are not reactions to events — they are the pre-existing fractures, habits, fears, and drives that this person carries into every room.
+
+Read the character's persona card and scenario. Identify ${count} distinct psychological fragments — voices born from who this person IS, not what happens to them.
+
+CHAT TONE: ${toneDesc}
+
+AVAILABLE ARCANA: ${Object.keys(ARCANA).join(', ')}
+
+AVAILABLE THEMES (influence triggers ONLY from this list):
+${themeList}
+
+METAPHOR DOMAINS (each voice gets ONE, all different):
+${METAPHOR_DOMAINS.join(', ')}
+
+VOICE DEPTHS — assign a mix:
+- "core" (1 max): Fundamental identity fragment. Can never truly resolve. Default influence 20, chattiness 1-2.
+- "rooted" (1-2): Deep psychological pattern. Hard to resolve. Default influence 30, chattiness 2-4.
+- "surface" (1-2): Reactive trait, might fade. Default influence 40, chattiness 3-5.
+
+CREATIVE CONSTRAINTS:
+- Names must NOT be "The [Emotion]" — push for unexpected, specific, even mundane. "The Accountant." "The Teeth." "Sweet Nothing." "The Flinch."
+- Each voice needs a verbal tic recognizable in two sentences
+- Each voice is WRONG about something specific — their blind spot
+- Each voice knows it's a fragment, not a whole person — how does it feel about that?
+- NO duplicates in metaphor domain, arcana, or personality type
+- These voices should feel like they've ALWAYS been here — not freshly generated
+
+Respond ONLY with a valid JSON array. No other text. No markdown fences.`,
+        },
+        {
+            role: 'user',
+            content: `CHARACTER PERSONA:
+${personaText || '(No persona defined)'}
+
+${scenarioText ? `SCENARIO / CHARACTER CONTEXT:\n${scenarioText}` : ''}
+
+Extract ${count} pre-existing voice fragments from this character. What psychological pieces were already in place before the story started?
+
+For each voice, consider:
+- What trait or pattern would this person carry from their background?
+- What fear, drive, or habit defines a piece of them?
+- What part of them do they not want to look at?
+
+Return this exact JSON array:
+[
+    {
+        "name": "Voice Name",
+        "arcana": "arcana_key",
+        "depth": "core|rooted|surface",
+        "birthMoment": "The specific aspect of the persona this voice was born from. 1-2 sentences.",
+        "personality": "2-3 sentence personality description rooted in the persona.",
+        "speakingStyle": "How they talk. Specific patterns.",
+        "obsession": "The specific thing this voice fixates on.",
+        "opinion": "This voice's take on the character. One provocative sentence.",
+        "blindSpot": "What this voice cannot see clearly.",
+        "selfAwareness": "How this voice feels about being only a fragment.",
+        "metaphorDomain": "one domain from the list",
+        "verbalTic": "A specific speech pattern with example.",
+        "chattiness": 3,
+        "influenceTriggers": {
+            "raises": ["theme1", "theme2", "theme3"],
+            "lowers": ["theme4", "theme5"]
+        },
+        "resolution": {
+            "type": "fade|heal|transform|confront|witness|endure",
+            "condition": "What resolves this voice. Hidden from user.",
+            "threshold": 60,
+            "transformsInto": null
+        }
+    }
+]
+
+DEPTH RULES for resolution:
+- core: MUST use "endure" (threshold: null, condition: empty). These never resolve.
+- rooted: Use heal, transform, confront, or witness. Threshold 50-80.
+- surface: Use fade, heal, or transform. Threshold 30-60.`,
+        },
+    ];
+}
+
+/**
+ * Parse the multi-voice extraction response.
+ */
+function parsePersonaExtractionResponse(responseText, expectedCount) {
+    if (!responseText) return null;
+
+    try {
+        let jsonStr = responseText.trim();
+
+        // Strip markdown fences
+        const fenceMatch = jsonStr.match(/```(?:json)?\s*([\s\S]*?)```/);
+        if (fenceMatch) jsonStr = fenceMatch[1].trim();
+
+        // Find JSON array
+        const bracketMatch = jsonStr.match(/\[[\s\S]*\]/);
+        if (bracketMatch) jsonStr = bracketMatch[0];
+
+        const parsed = JSON.parse(jsonStr);
+        if (!Array.isArray(parsed)) return null;
+
+        const results = [];
+        const usedArcana = new Set();
+        const usedDomains = new Set();
+
+        for (const raw of parsed) {
+            if (!raw.name || !raw.personality) continue;
+
+            // Deduplicate arcana
+            let arcana = raw.arcana;
+            if (!ARCANA[arcana] || usedArcana.has(arcana)) {
+                arcana = Object.keys(ARCANA).find(k => !usedArcana.has(k)) || 'fool';
+            }
+            usedArcana.add(arcana);
+
+            // Deduplicate metaphor domain
+            let domain = raw.metaphorDomain || 'general';
+            if (usedDomains.has(domain)) {
+                domain = METAPHOR_DOMAINS.find(d => !usedDomains.has(d)) || domain;
+            }
+            usedDomains.add(domain);
+
+            // Determine depth
+            const depth = ['surface', 'rooted', 'core'].includes(raw.depth) ? raw.depth : 'rooted';
+
+            // Validate influence triggers
+            const triggers = raw.influenceTriggers || { raises: [], lowers: [] };
+            triggers.raises = (triggers.raises || []).filter(t => ALL_THEMES.includes(t));
+            triggers.lowers = (triggers.lowers || []).filter(t => ALL_THEMES.includes(t));
+
+            // Validate resolution
+            const resolution = raw.resolution || {};
+            const validTypes = Object.keys(RESOLUTION_TYPES);
+            if (!validTypes.includes(resolution.type)) {
+                resolution.type = depth === 'core' ? 'endure' : (depth === 'surface' ? 'fade' : 'heal');
+            }
+
+            const allowed = RESOLUTION_TYPES[resolution.type]?.depthAllowed || [];
+            if (!allowed.includes(depth)) {
+                resolution.type = depth === 'core' ? 'endure' : (depth === 'surface' ? 'fade' : 'heal');
+            }
+
+            if (resolution.type === 'endure') {
+                resolution.condition = '';
+                resolution.threshold = null;
+                resolution.transformsInto = null;
+            }
+
+            // Clamp chattiness
+            const depthDef = VOICE_DEPTH[depth];
+            const [minChat, maxChat] = depthDef?.chattinessRange || [1, 5];
+            const chattiness = Math.max(minChat, Math.min(maxChat, raw.chattiness || 3));
+
+            results.push({
+                name: raw.name,
+                arcana,
+                personality: raw.personality,
+                speakingStyle: raw.speakingStyle || '',
+                obsession: raw.obsession || '',
+                opinion: raw.opinion || '',
+                blindSpot: raw.blindSpot || '',
+                selfAwareness: raw.selfAwareness || '',
+                metaphorDomain: domain,
+                verbalTic: raw.verbalTic || '',
+                chattiness,
+                influenceTriggers: triggers,
+                resolution: {
+                    type: resolution.type,
+                    condition: resolution.condition || '',
+                    progress: 0,
+                    threshold: resolution.threshold ?? (resolution.type === 'endure' ? null : 60),
+                    transformsInto: resolution.transformsInto || null,
+                },
+                // Temp fields for the caller (stripped by addVoice)
+                _depth: depth,
+                _birthMoment: raw.birthMoment || '',
+            });
+
+            if (results.length >= expectedCount) break;
+        }
+
+        return results;
+
+    } catch (e) {
+        console.error(`${LOG_PREFIX} Persona extraction parse failed:`, e);
+        return null;
+    }
 }
 
 /**
