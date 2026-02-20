@@ -3,7 +3,7 @@
  * Pure data, no dependencies.
  */
 
-export const EXTENSION_NAME = 'third-party/The-Chorus';
+export const EXTENSION_NAME = 'third-party/the-chorus';
 export const LOG_PREFIX = '[The Chorus]';
 
 // =============================================================================
