@@ -66,95 +66,101 @@ let isDrawing = false;  // Shared mutex — blocks auto-draws during manual draw
  * Render sidebar commentary from voice engine output.
  * @param {Object[]} commentary - Array of { voiceId, name, arcana, relationship, text }
  */
+/**
+ * Render voice commentary as inline reactions in the main ST chat.
+ * Injects a compact voice block after the last AI message.
+ * These are visual-only — not stored in chat history.
+ */
 export function renderSidebarCommentary(commentary) {
-    const $feed = $('#chorus-sidebar-feed');
-    const $empty = $('#chorus-sidebar-empty');
-    const $count = $('#chorus-sidebar-count');
-
     if (!commentary || commentary.length === 0) return;
 
-    // Hide empty state
-    $empty.hide();
+    // Find the last AI message in the chat
+    const $chat = $('#chat');
+    const $lastMes = $chat.find('.mes').last();
+    if ($lastMes.length === 0) return;
 
-    // Build messages
+    const mesId = $lastMes.attr('mesid');
+
+    // Don't duplicate — check if we already injected for this message
+    if ($chat.find(`.chorus-chat-voices[data-mesid="${mesId}"]`).length > 0) {
+        // Append to existing block
+        const $existing = $chat.find(`.chorus-chat-voices[data-mesid="${mesId}"]`);
+        for (const entry of commentary) {
+            $existing.append(buildChatVoiceMessage(entry));
+        }
+        scrollChat();
+        return;
+    }
+
+    // Build the voice block
+    const $block = $(`<div class="chorus-chat-voices" data-mesid="${mesId}"></div>`);
+
     for (const entry of commentary) {
-        const arc = getArcana(entry.arcana);
-        const relColor = RELATIONSHIP_COLORS[entry.relationship] || '#888888';
-        const isAgitated = (entry.relationship === 'manic' || entry.relationship === 'obsessed' || entry.relationship === 'hostile');
-        const isNarrator = entry.isNarrator || entry.voiceId === '_narrator';
-
-        const cssClass = isNarrator
-            ? 'chorus-sidebar-msg chorus-sidebar-msg--narrator'
-            : `chorus-sidebar-msg${isAgitated ? ' chorus-sidebar-msg--agitated' : ''}`;
-
-        const $msg = $(`
-            <div class="${cssClass}" data-voice-id="${entry.voiceId}">
-                <div class="chorus-sidebar-msg__glyph" style="color:${isNarrator ? '#c9a84c' : arc.glow};border-color:${isNarrator ? '#c9a84c44' : arc.color + '44'}">${isNarrator ? '\u2726' : arc.glyph}</div>
-                <div class="chorus-sidebar-msg__body">
-                    <div class="chorus-sidebar-msg__header">
-                        <span class="chorus-sidebar-msg__name" style="color:${isNarrator ? '#c9a84c' : arc.glow}">${entry.name}</span>
-                        ${isNarrator ? '' : `<span class="chorus-sidebar-msg__rel" style="color:${relColor}">${entry.relationship}</span>`}
-                    </div>
-                    <div class="chorus-sidebar-msg__text">${escapeHtml(entry.text)}</div>
-                </div>
-            </div>
-        `);
-
-        $feed.append($msg);
+        $block.append(buildChatVoiceMessage(entry));
     }
 
-    // Update count
-    const total = $feed.find('.chorus-sidebar-msg').length;
-    $count.text(total);
+    // Insert after the last message
+    $lastMes.after($block);
+    scrollChat();
+}
 
-    // Auto-scroll to bottom
-    const feedEl = $feed[0];
-    if (feedEl) {
-        feedEl.scrollTop = feedEl.scrollHeight;
-    }
+/**
+ * Build a single voice message for inline chat display.
+ */
+function buildChatVoiceMessage(entry) {
+    const arc = getArcana(entry.arcana);
+    const isNarrator = entry.isNarrator || entry.voiceId === '_narrator';
+    const relColor = RELATIONSHIP_COLORS[entry.relationship] || '#888';
 
-    // Trim old messages (keep last ~30)
-    const $msgs = $feed.find('.chorus-sidebar-msg');
-    if ($msgs.length > 30) {
-        $msgs.slice(0, $msgs.length - 30).remove();
+    const glyphColor = isNarrator ? '#c9a84c' : arc.glow;
+    const glyph = isNarrator ? '\u2726' : arc.glyph;
+    const name = entry.name;
+    const rel = isNarrator ? '' : `<span class="chorus-chat-voice__rel" style="color:${relColor}">${entry.relationship}</span>`;
+    const agitatedClass = (!isNarrator && (entry.relationship === 'manic' || entry.relationship === 'obsessed' || entry.relationship === 'hostile'))
+        ? ' chorus-chat-voice--agitated' : '';
+    const narratorClass = isNarrator ? ' chorus-chat-voice--narrator' : '';
+
+    return `<div class="chorus-chat-voice${agitatedClass}${narratorClass}" data-voice-id="${entry.voiceId}">
+        <div class="chorus-chat-voice__glyph" style="color:${glyphColor}">${glyph}</div>
+        <div class="chorus-chat-voice__body">
+            <span class="chorus-chat-voice__name" style="color:${glyphColor}">${name}</span>
+            ${rel}
+            <span class="chorus-chat-voice__text">${escapeHtml(entry.text)}</span>
+        </div>
+    </div>`;
+}
+
+/**
+ * Scroll the main chat to bottom.
+ */
+function scrollChat() {
+    const chatEl = document.getElementById('chat');
+    if (chatEl) {
+        requestAnimationFrame(() => {
+            chatEl.scrollTop = chatEl.scrollHeight;
+        });
     }
 }
 
 /**
- * Show loading indicator in sidebar.
+ * Show loading indicator (FAB pulses while voices are thinking).
  */
 export function showSidebarLoading() {
-    const $feed = $('#chorus-sidebar-feed');
-    $('#chorus-sidebar-empty').hide();
-    $feed.find('.chorus-sidebar__loading').remove();
-
-    $feed.append(`
-        <div class="chorus-sidebar__loading">
-            <div class="chorus-sidebar__loading-dot"></div>
-            <div class="chorus-sidebar__loading-dot"></div>
-            <div class="chorus-sidebar__loading-dot"></div>
-        </div>
-    `);
-
-    const feedEl = $feed[0];
-    if (feedEl) feedEl.scrollTop = feedEl.scrollHeight;
+    $('#chorus-fab').addClass('chorus-fab--loading');
 }
 
 /**
- * Hide loading indicator in sidebar.
+ * Hide loading indicator.
  */
 export function hideSidebarLoading() {
-    $('#chorus-sidebar-feed .chorus-sidebar__loading').remove();
+    $('#chorus-fab').removeClass('chorus-fab--loading');
 }
 
 /**
- * Clear sidebar (on chat switch).
+ * Clear injected commentary from chat (on chat switch).
  */
 export function clearSidebar() {
-    const $feed = $('#chorus-sidebar-feed');
-    $feed.find('.chorus-sidebar-msg, .chorus-sidebar__loading').remove();
-    $('#chorus-sidebar-empty').show();
-    $('#chorus-sidebar-count').text('');
+    $('#chat .chorus-chat-voices').remove();
 }
 
 /**
