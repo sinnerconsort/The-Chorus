@@ -56,6 +56,7 @@ function buildInkBleed(voice, arc) {
 function buildTarotCard(voice) {
     const arc = getArcana(voice.arcana);
     const isDead = voice.state === 'dead';
+    const hasDM = !isDead && voice.pendingDM !== null && voice.pendingDM !== undefined;
     const borderStyle = voice.state === 'agitated'
         ? `1px solid ${arc.glow}66` : `1px solid rgba(201,168,76,0.2)`;
     const shadow = voice.state === 'agitated'
@@ -65,6 +66,8 @@ function buildTarotCard(voice) {
             : `0 0 5px rgba(0,0,0,0.5)`;
     const pulse = voice.state === 'agitated'
         ? `<div class="chorus-tarot__pulse" style="border-color:${arc.glow}"></div>` : '';
+    const dmBadge = hasDM
+        ? `<div class="chorus-tarot__dm-badge" style="background:${arc.glow};box-shadow:0 0 8px ${arc.glow}">✦</div>` : '';
     const deadClass = isDead ? ' chorus-tarot--dead' : '';
 
     return `<div class="chorus-tarot${deadClass}" id="chorus-card-${voice.id}" data-voice-id="${voice.id}">
@@ -83,6 +86,7 @@ function buildTarotCard(voice) {
                 ${buildInkBleed(voice, arc)}
                 <div class="chorus-tarot__scanlines"></div>
                 ${pulse}
+                ${dmBadge}
             </div>
             <!-- BACK -->
             <div class="chorus-tarot__face chorus-tarot__back" style="border:1px solid rgba(201,168,76,0.2);box-shadow:${shadow}">
