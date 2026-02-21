@@ -494,19 +494,47 @@ async function processCouncilTurn(userMessage = null) {
 
 /**
  * Start the auto-continue loop. Generates on interval with jitter.
+ * Speed and auto-continue controlled by settings.
  */
 function startAutoTimer() {
     stopAutoTimer();
 
+    // Check if auto-continue is enabled
+    if (extensionSettings.councilAutoContinue === false) {
+        console.log(`${LOG_PREFIX} Council auto-continue disabled`);
+        return;
+    }
+
     const tick = () => {
         if (!isActive || isGenerating) return;
+        // Re-check setting each tick (user might toggle mid-session)
+        if (extensionSettings.councilAutoContinue === false) return;
 
         processCouncilTurn();
 
-        // Schedule next with jitter (8-15 seconds)
-        const baseInterval = 10000;
-        const jitter = (Math.random() - 0.5) * 7000; // ±3.5s
-        const next = Math.max(6000, baseInterval + jitter);
+        // Speed-based intervals:
+        //   fast:   5-8s
+        //   normal: 8-15s
+        //   slow:   15-25s
+        const speed = extensionSettings.councilSpeed || 'normal';
+        let baseInterval, jitterRange;
+        switch (speed) {
+            case 'fast':
+                baseInterval = 6500;
+                jitterRange = 3000;
+                break;
+            case 'slow':
+                baseInterval = 20000;
+                jitterRange = 10000;
+                break;
+            default: // normal
+                baseInterval = 10000;
+                jitterRange = 7000;
+                break;
+        }
+
+        const jitter = (Math.random() - 0.5) * jitterRange;
+        const next = Math.max(4000, baseInterval + jitter);
 
         autoTimer = setTimeout(tick, next);
     };
