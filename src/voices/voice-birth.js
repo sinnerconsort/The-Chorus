@@ -140,7 +140,8 @@ function getExistingVoiceSummary() {
 
     return living.map(v => {
         const arc = getArcana(v.arcana);
-        return `- ${v.name} (${arc.name}, ${v.depth || 'rooted'}, domain: ${v.metaphorDomain || 'general'}) — ${v.personality.substring(0, 100)}. Tic: ${(v.verbalTic || 'none').substring(0, 60)}`;
+        const rev = v.reversed ? ' REVERSED' : '';
+        return `- ${v.name} (${arc.name}${rev}, ${v.depth || 'rooted'}, domain: ${v.metaphorDomain || 'general'}) — ${v.personality.substring(0, 100)}. Tic: ${(v.verbalTic || 'none').substring(0, 60)}`;
     }).join('\n');
 }
 
@@ -148,7 +149,8 @@ function getExistingVoiceSummary() {
 // BIRTH PROMPT
 // =============================================================================
 
-function buildBirthPrompt(trigger, depth, arcanaHint = null) {
+function buildBirthPrompt(trigger, depth, options = {}) {
+    const { arcanaHint = null, reversed = false, birthType = 'event' } = options;
     const toneDesc = getToneDescription();
     const personaText = getPersonaText();
     const existingVoices = getExistingVoiceSummary();
@@ -163,9 +165,49 @@ function buildBirthPrompt(trigger, depth, arcanaHint = null) {
 
     const resolutionGuidance = getResolutionGuidance(depth);
 
-    const arcanaBlock = arcanaHint
-        ? `SUGGESTED ARCANA: ${arcanaHint} (you may override if another fits better)`
-        : `CHOOSE ARCANA from: ${Object.keys(ARCANA).join(', ')}`;
+    // Arcana selection with reversed support
+    let arcanaBlock;
+    if (arcanaHint) {
+        const arcDef = ARCANA[arcanaHint];
+        if (reversed && arcDef) {
+            arcanaBlock = `ASSIGNED ARCANA: ${arcanaHint} (REVERSED)
+UPRIGHT MEANING: ${arcDef.upright}
+REVERSED MEANING: ${arcDef.reversed}
+This voice is born from the SHADOW side of this arcana. The reversed meaning should color everything about this voice — its personality, blind spot, obsession. It's the dark mirror, the inverted lesson, the thing you do INSTEAD of what the card actually teaches.`;
+        } else {
+            arcanaBlock = `SUGGESTED ARCANA: ${arcanaHint} (you may override if another fits better)`;
+        }
+    } else if (reversed) {
+        // Build reversed guidance for all arcana
+        const reversedExamples = Object.entries(ARCANA)
+            .filter(([, v]) => v.reversed)
+            .slice(0, 5)
+            .map(([key, v]) => `  ${key}: ${v.reversed}`)
+            .join('\n');
+        arcanaBlock = `CHOOSE ARCANA from: ${Object.keys(ARCANA).join(', ')}
+THIS VOICE IS REVERSED. Choose an arcana, then build the voice from its SHADOW meaning:
+${reversedExamples}
+(... and similar inversions for all arcana)
+The reversed voice embodies what happens when the card's lesson is refused, inverted, or corrupted.`;
+    } else {
+        arcanaBlock = `CHOOSE ARCANA from: ${Object.keys(ARCANA).join(', ')}
+You may also choose to make this voice REVERSED if the birth moment reflects the shadow/inverted aspect of an arcana. If reversed, set "reversed": true in your response and build the personality from the shadow meaning.`;
+    }
+
+    // Birth type context
+    let birthTypeContext = '';
+    if (birthType === 'accumulation') {
+        birthTypeContext = `
+BIRTH TYPE: ACCUMULATION
+This voice wasn't born from a single extreme moment. It was born from a PATTERN — the same small wound repeated until it became a voice. Death by a thousand cuts. The trigger below describes the accumulated theme, not one event.
+The birth moment should reflect this: "Not any one thing. Just... everything. All at once." or "The fifth time they said it was fine. The fifth time."
+The voice knows it's made of paper cuts, not a single wound. That shapes its personality.`;
+    } else if (birthType === 'merge') {
+        birthTypeContext = `
+BIRTH TYPE: MERGE
+This voice was born from two other voices consolidating. They had overlapping concerns and eventually merged into something more integrated. The trigger below describes both source voices.
+This voice should feel like a synthesis — not just one or the other, but a new perspective that incorporates elements of both. More complex, more layered. The whole is different from the sum of its parts.`;
+    }
 
     return [
         {
@@ -185,6 +227,7 @@ ${depthDef.description}
 Chattiness range: ${depthDef.chattinessRange[0]}-${depthDef.chattinessRange[1]}
 
 ${arcanaBlock}
+${birthTypeContext}
 
 AVAILABLE THEMES (pick influence triggers ONLY from this list):
 ${themeList}
@@ -240,6 +283,7 @@ Generate a voice born from this moment. Return this exact JSON structure:
 {
     "name": "The Something",
     "arcana": "one of the arcana keys",
+    "reversed": false,
     "personality": "2-3 sentence personality description. Specific. Rooted in the birth moment.",
     "speakingStyle": "How they talk. Specific patterns, not just adjectives.",
     "obsession": "The specific thing this voice fixates on. Not broad emotion — one concrete detail.",
@@ -432,6 +476,7 @@ function parseBirthResponse(responseText, depth) {
         return {
             name: parsed.name,
             arcana: parsed.arcana,
+            reversed: !!parsed.reversed,
             personality: parsed.personality,
             speakingStyle: parsed.speakingStyle || '',
             obsession: parsed.obsession || '',
@@ -481,7 +526,7 @@ export async function birthVoiceFromEvent(trigger, impact, themes = []) {
     console.log(`${LOG_PREFIX} Attempting voice birth (${depth}) from: ${trigger.substring(0, 60)}...`);
 
     try {
-        const messages = buildBirthPrompt(trigger, depth);
+        const messages = buildBirthPrompt(trigger, depth, { birthType: 'event' });
         const responseText = await sendRequest(messages, 800);
         const voiceData = parseBirthResponse(responseText, depth);
 
@@ -501,15 +546,155 @@ export async function birthVoiceFromEvent(trigger, impact, themes = []) {
             influence: depthDef.defaultInfluence,
             state: 'active',
             depth,
+            birthType: 'event',
         });
 
         if (voice) {
-            console.log(`${LOG_PREFIX} Voice born: ${voice.name} (${voice.arcana}, ${depth}, resolution: ${voice.resolution.type})`);
+            console.log(`${LOG_PREFIX} Voice born: ${voice.name} (${voice.arcana}${voice.reversed ? ' REVERSED' : ''}, ${depth}, resolution: ${voice.resolution.type})`);
         }
 
         return voice;
     } catch (e) {
         console.error(`${LOG_PREFIX} Voice birth failed:`, e);
+        return null;
+    }
+}
+
+/**
+ * Birth a voice from accumulated minor themes.
+ * "Death by a thousand cuts" — not one moment, but a pattern.
+ *
+ * @param {string} theme - The theme that accumulated past threshold
+ * @param {number} count - How many times it appeared
+ * @returns {Object|null} The born voice
+ */
+export async function birthVoiceFromAccumulation(theme, count) {
+    const depth = 'rooted'; // Accumulation = pattern = rooted (not fleeting)
+    const depthDef = VOICE_DEPTH[depth];
+
+    const living = getLivingVoices();
+    if (living.length >= (extensionSettings.maxVoices || 7)) {
+        return null;
+    }
+
+    // Build a trigger that communicates the pattern nature
+    const trigger = `ACCUMULATED PATTERN: The theme "${theme}" has appeared ${count} times across multiple messages. This is not one dramatic moment — it's a persistent, recurring thread that has been quietly building. Each individual instance was minor, but the pattern itself is significant. Something about "${theme}" keeps coming back, keeps pressing, keeps being relevant to {{user}}'s experience.`;
+
+    console.log(`${LOG_PREFIX} Attempting accumulation birth from theme: ${theme} (${count} occurrences)`);
+
+    try {
+        // Accumulation births lean toward reversed — the slow build is often a shadow pattern
+        const reversed = Math.random() < 0.5; // 50% chance of reversed
+        const messages = buildBirthPrompt(trigger, depth, {
+            birthType: 'accumulation',
+            reversed,
+        });
+        const responseText = await sendRequest(messages, 800);
+        const voiceData = parseBirthResponse(responseText, depth);
+
+        if (!voiceData) return null;
+
+        const ctx = getContext();
+        const chat = ctx.chat || [];
+
+        const voice = addVoice({
+            ...voiceData,
+            reversed: voiceData.reversed || reversed,
+            birthMoment: `Not any one thing. "${theme}" — again and again, ${count} times. The pattern became a voice.`,
+            birthMessageId: chat.length - 1,
+            influence: depthDef.defaultInfluence + 5, // Slight bonus — they've been building
+            state: 'active',
+            depth,
+            birthType: 'accumulation',
+        });
+
+        if (voice) {
+            console.log(`${LOG_PREFIX} Accumulation birth: ${voice.name} (${voice.arcana}${voice.reversed ? ' REVERSED' : ''}, from ${count}x "${theme}")`);
+        }
+
+        return voice;
+    } catch (e) {
+        console.error(`${LOG_PREFIX} Accumulation birth failed:`, e);
+        return null;
+    }
+}
+
+/**
+ * Birth a voice from two merging voices.
+ * Two overlapping voices consolidate into something more integrated.
+ *
+ * @param {Object} voiceA - First source voice
+ * @param {Object} voiceB - Second source voice
+ * @returns {Object|null} The merged voice
+ */
+export async function birthVoiceFromMerge(voiceA, voiceB) {
+    const depth = voiceA.depth === 'core' || voiceB.depth === 'core' ? 'rooted' : voiceA.depth;
+
+    const trigger = `MERGE: Two voices are consolidating into one.
+
+VOICE A: ${voiceA.name} (${voiceA.arcana})
+Personality: ${voiceA.personality}
+Obsession: ${voiceA.obsession}
+Blind Spot: ${voiceA.blindSpot}
+Metaphor Domain: ${voiceA.metaphorDomain}
+Birth Moment: ${voiceA.birthMoment}
+
+VOICE B: ${voiceB.name} (${voiceB.arcana})
+Personality: ${voiceB.personality}
+Obsession: ${voiceB.obsession}
+Blind Spot: ${voiceB.blindSpot}
+Metaphor Domain: ${voiceB.metaphorDomain}
+Birth Moment: ${voiceB.birthMoment}
+
+These two voices have been circling the same territory. They overlap. They echo. Now they're merging — not one consuming the other, but both dissolving into something that holds both perspectives. The new voice should feel like a synthesis: more complex, more layered, incorporating the obsessions and blind spots of both.`;
+
+    console.log(`${LOG_PREFIX} Attempting merge birth: ${voiceA.name} + ${voiceB.name}`);
+
+    try {
+        const messages = buildBirthPrompt(trigger, depth, { birthType: 'merge' });
+        const responseText = await sendRequest(messages, 800);
+        const voiceData = parseBirthResponse(responseText, depth);
+
+        if (!voiceData) return null;
+
+        const ctx = getContext();
+        const chat = ctx.chat || [];
+
+        // Combine influence from both sources
+        const combinedInfluence = Math.min(80,
+            Math.floor((voiceA.influence + voiceB.influence) * 0.6));
+
+        // Merge influence triggers
+        const mergedRaises = [...new Set([
+            ...(voiceData.influenceTriggers?.raises || []),
+            ...(voiceA.influenceTriggers?.raises || []).slice(0, 2),
+            ...(voiceB.influenceTriggers?.raises || []).slice(0, 2),
+        ])].slice(0, 5);
+
+        const mergedLowers = [...new Set([
+            ...(voiceData.influenceTriggers?.lowers || []),
+            ...(voiceA.influenceTriggers?.lowers || []).slice(0, 1),
+            ...(voiceB.influenceTriggers?.lowers || []).slice(0, 1),
+        ])].slice(0, 4);
+
+        const voice = addVoice({
+            ...voiceData,
+            influenceTriggers: { raises: mergedRaises, lowers: mergedLowers },
+            birthMoment: `Born from the merger of ${voiceA.name} and ${voiceB.name}. Two fragments that overlapped until they became one.`,
+            birthMessageId: chat.length - 1,
+            influence: combinedInfluence,
+            state: 'active',
+            depth,
+            birthType: 'merge',
+        });
+
+        if (voice) {
+            console.log(`${LOG_PREFIX} Merge birth: ${voice.name} from ${voiceA.name} + ${voiceB.name}`);
+        }
+
+        return voice;
+    } catch (e) {
+        console.error(`${LOG_PREFIX} Merge birth failed:`, e);
         return null;
     }
 }

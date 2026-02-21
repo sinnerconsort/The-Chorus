@@ -12,7 +12,7 @@
 import { getContext } from '../../../../../extensions.js';
 import {
     ALL_THEMES, THEMES, TONE_ANCHORS, SPREAD_POSITIONS,
-    LOG_PREFIX, IMPACT_TO_DEPTH,
+    LOG_PREFIX, IMPACT_TO_DEPTH, ACCUMULATION, CONSUME_THRESHOLDS,
 } from '../config.js';
 import {
     extensionSettings,
@@ -22,11 +22,14 @@ import {
     getArcana,
     adjustInfluence,
     updateVoice,
+    resolveVoice,
     saveChatState,
     getEscalation,
     setEscalation,
     getMessagesSinceLastDraw,
     resetMessageCounter,
+    updateThemeAccumulator,
+    clearThemeAccumulation,
 } from '../state.js';
 import { classifyMessage } from './classifier.js';
 import {
@@ -35,7 +38,7 @@ import {
     selectForSpread,
     calculateInfluenceDeltas,
 } from './participation.js';
-import { birthVoiceFromEvent, birthVoicesFromPersona } from './voice-birth.js';
+import { birthVoiceFromEvent, birthVoicesFromPersona, birthVoiceFromAccumulation, birthVoiceFromMerge } from './voice-birth.js';
 import { processLifecycle, completeTransformation } from './voice-lifecycle.js';
 import { tryAmbientNarration, narrateBirth, narrateDeath } from './narrator.js';
 
@@ -176,8 +179,20 @@ function buildSidebarPrompt(speakers, recentMessages, personaExcerpt) {
             }
         }
 
+        // Reversed status
+        const reversedHint = voice.reversed
+            ? `REVERSED ASPECT: This voice embodies the shadow/inverted meaning of its arcana. Your perspective is darker, more complicated, more honest about the ugly parts.`
+            : '';
+
+        // Birth type flavor
+        const birthTypeHint = voice.birthType === 'accumulation'
+            ? 'Born from a pattern, not a moment. You\'re made of paper cuts.'
+            : voice.birthType === 'merge'
+                ? `Born from the merger of two other voices. You carry both their perspectives.`
+                : '';
+
         return `---
-VOICE: ${voice.name} (${arcana.name})
+VOICE: ${voice.name} (${arcana.name}${voice.reversed ? ' REVERSED' : ''})
 Personality: ${voice.personality}
 Speaking Style: ${voice.speakingStyle}
 Obsession: ${voice.obsession || 'None defined'}
@@ -186,6 +201,8 @@ Blind Spot: ${voice.blindSpot || 'None defined'}
 Fragment Identity: ${voice.selfAwareness || 'Uncertain about its nature'}
 Thinks In Terms Of: ${voice.metaphorDomain || 'general'} — use this lens when reacting
 Verbal Tic: ${voice.verbalTic || 'None'}
+${reversedHint}
+${birthTypeHint}
 ${birthLine}
 Relationship with {{user}}: ${voice.relationship} | Influence: ${voice.influence}/100
 ${v2vBlock}
@@ -747,9 +764,31 @@ export async function processMessage(messageText) {
         }
     }
 
-    // ─── Step 5: Birth check ───
+    // ─── Step 5: Birth check (event-driven) ───
     if (!result.newVoice) {
         result.newVoice = await checkBirth(impact, themes, summary, messageText);
+    }
+
+    // ─── Step 5b: Accumulation tracking + birth ───
+    if (!result.newVoice && themes.length > 0) {
+        result.newVoice = await checkAccumulationBirth(impact, themes);
+    }
+
+    // ─── Step 5c: Consume check (predator devours prey) ───
+    if (!result.newVoice) {
+        const consumeEvent = checkConsume();
+        if (consumeEvent) {
+            result.lifecycleEvents.push(consumeEvent);
+        }
+    }
+
+    // ─── Step 5d: Merge check (overlapping voices consolidate) ───
+    if (!result.newVoice) {
+        const mergeResult = await checkMerge();
+        if (mergeResult) {
+            result.newVoice = mergeResult.newVoice;
+            result.lifecycleEvents.push(...mergeResult.events);
+        }
     }
 
     // Narrate new birth
@@ -819,6 +858,215 @@ async function checkBirth(impact, themes, summary, messageText) {
         console.error(`${LOG_PREFIX} Birth check failed:`, e);
         return null;
     }
+}
+
+/**
+ * Track theme accumulation and check for "death by a thousand cuts" births.
+ * Only fires on minor impact — significant/critical have their own birth path.
+ */
+async function checkAccumulationBirth(impact, themes) {
+    // Only accumulate on none/minor — significant+ gets handled by checkBirth
+    if (impact === 'significant' || impact === 'critical') return null;
+
+    // Cooldown check
+    if (Date.now() - lastBirthTime < BIRTH_COOLDOWN_MS) return null;
+
+    // Update accumulator
+    const acc = updateThemeAccumulator(themes, ACCUMULATION.decayPerMessage);
+
+    // Check for any theme crossing threshold
+    const threshold = ACCUMULATION.threshold;
+    const minMessages = ACCUMULATION.minUniqueMessages;
+
+    for (const [theme, data] of Object.entries(acc)) {
+        if (data.count >= threshold && data.messages >= minMessages) {
+            // Deck space check
+            const living = getLivingVoices();
+            if (living.length >= (extensionSettings.maxVoices || 7)) return null;
+
+            // Check this theme isn't already well-covered by existing voices
+            const alreadyCovered = living.some(v => {
+                const raises = v.influenceTriggers?.raises || [];
+                return raises.includes(theme);
+            });
+            if (alreadyCovered) {
+                // Theme already has a voice — just reset accumulator
+                clearThemeAccumulation(theme);
+                continue;
+            }
+
+            try {
+                const voice = await birthVoiceFromAccumulation(theme, data.messages);
+                if (voice) {
+                    lastBirthTime = Date.now();
+                    clearThemeAccumulation(theme);
+                    return voice;
+                }
+            } catch (e) {
+                console.error(`${LOG_PREFIX} Accumulation birth failed:`, e);
+            }
+        }
+    }
+
+    return null;
+}
+
+/**
+ * Check if a dominant voice consumes a weaker one.
+ * Predator: high influence + hostile opinion of prey.
+ * Prey: low influence, unable to resist.
+ *
+ * Returns a lifecycle event or null.
+ */
+function checkConsume() {
+    const living = getLivingVoices();
+    if (living.length < 2) return null;
+
+    // Only check occasionally (10% per message to avoid spam)
+    if (Math.random() > 0.10) return null;
+
+    const { predatorMinInfluence, preyMaxInfluence } = CONSUME_THRESHOLDS;
+
+    for (const predator of living) {
+        if (predator.influence < predatorMinInfluence) continue;
+        if (!predator.relationships) continue;
+
+        for (const prey of living) {
+            if (prey.id === predator.id) continue;
+            if (prey.influence > preyMaxInfluence) continue;
+            if (prey.depth === 'core') continue; // Core voices can't be consumed
+
+            // Check for hostile opinion
+            const opinion = (predator.relationships[prey.id] || '').toLowerCase();
+            const isHostile = opinion.includes('hostile') || opinion.includes('hate') ||
+                              opinion.includes('suppress') || opinion.includes('devour') ||
+                              opinion.includes('destroy');
+
+            if (!isHostile) continue;
+
+            // CONSUME: predator absorbs prey
+            console.log(`${LOG_PREFIX} CONSUME: ${predator.name} (inf:${predator.influence}) devours ${prey.name} (inf:${prey.influence})`);
+
+            // Predator gains some of prey's triggers
+            const preyRaises = prey.influenceTriggers?.raises || [];
+            const predRaises = predator.influenceTriggers?.raises || [];
+            const stolen = preyRaises.filter(t => !predRaises.includes(t)).slice(0, 2);
+            if (stolen.length > 0) {
+                updateVoice(predator.id, {
+                    influenceTriggers: {
+                        ...predator.influenceTriggers,
+                        raises: [...predRaises, ...stolen],
+                    },
+                });
+            }
+
+            // Predator gains influence from the kill
+            adjustInfluence(predator.id, 10);
+
+            // Prey dies (consumed by predator)
+            resolveVoice(prey.id, `consumed by ${predator.name}`);
+
+            return {
+                type: 'consumed',
+                predatorId: predator.id,
+                predatorName: predator.name,
+                preyId: prey.id,
+                preyName: prey.name,
+                voiceId: prey.id,
+                name: prey.name,
+                stolen,
+                message: `${predator.name} devoured ${prey.name}. The weaker voice went silent. ${stolen.length > 0 ? `${predator.name} now carries: ${stolen.join(', ')}.` : ''}`,
+                animation: 'consume',
+            };
+        }
+    }
+
+    return null;
+}
+
+/**
+ * Check if two voices should merge.
+ * Conditions:
+ *   - Both have overlapping raise triggers (2+ shared)
+ *   - Both have allied/positive opinions of each other
+ *   - Neither is core depth
+ *   - Both have been alive for at least 10 messages (not brand new)
+ *
+ * Returns { newVoice, events[] } or null.
+ */
+async function checkMerge() {
+    const living = getLivingVoices();
+    if (living.length < 3) return null; // Need at least 3 voices (2 merge, 1 remains)
+
+    // Only check rarely (5% per message)
+    if (Math.random() > 0.05) return null;
+
+    // Cooldown
+    if (Date.now() - lastBirthTime < BIRTH_COOLDOWN_MS * 2) return null;
+
+    for (let i = 0; i < living.length; i++) {
+        for (let j = i + 1; j < living.length; j++) {
+            const a = living[i];
+            const b = living[j];
+
+            // Skip core voices
+            if (a.depth === 'core' || b.depth === 'core') continue;
+
+            // Check for overlap in raise triggers
+            const aRaises = a.influenceTriggers?.raises || [];
+            const bRaises = b.influenceTriggers?.raises || [];
+            const shared = aRaises.filter(t => bRaises.includes(t));
+            if (shared.length < 2) continue;
+
+            // Check mutual positive opinion
+            const aOpinionOfB = (a.relationships?.[b.id] || '').toLowerCase();
+            const bOpinionOfA = (b.relationships?.[a.id] || '').toLowerCase();
+            const positiveTerms = ['allied', 'respect', 'agree', 'protect', 'support', 'understand'];
+
+            const aSupportive = positiveTerms.some(t => aOpinionOfB.includes(t));
+            const bSupportive = positiveTerms.some(t => bOpinionOfA.includes(t));
+            if (!aSupportive || !bSupportive) continue;
+
+            // Check both are established (not brand new)
+            const now = Date.now();
+            if (now - (a.created || now) < 60000) continue; // At least 1 minute old
+            if (now - (b.created || now) < 60000) continue;
+
+            console.log(`${LOG_PREFIX} MERGE candidate: ${a.name} + ${b.name} (shared: ${shared.join(', ')})`);
+
+            try {
+                const newVoice = await birthVoiceFromMerge(a, b);
+                if (!newVoice) continue;
+
+                lastBirthTime = Date.now();
+
+                // Kill both source voices
+                resolveVoice(a.id, `merged into ${newVoice.name}`);
+                resolveVoice(b.id, `merged into ${newVoice.name}`);
+
+                return {
+                    newVoice,
+                    events: [
+                        {
+                            type: 'merged',
+                            voiceId: a.id,
+                            name: a.name,
+                            partnerId: b.id,
+                            partnerName: b.name,
+                            newVoiceId: newVoice.id,
+                            newVoiceName: newVoice.name,
+                            message: `${a.name} and ${b.name} merged. ${newVoice.name} was born from what they shared.`,
+                            animation: 'merge',
+                        },
+                    ],
+                };
+            } catch (e) {
+                console.error(`${LOG_PREFIX} Merge check failed:`, e);
+            }
+        }
+    }
+
+    return null;
 }
 
 /**
