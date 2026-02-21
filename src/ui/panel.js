@@ -231,20 +231,9 @@ export async function initUI() {
         $('#chorus-dissolution-overlay').appendTo('body');
         $('#chorus-transform-overlay').appendTo('body');
 
-        // Create FAB with flip-capable wrapper
-        const $fabWrapper = $(`<div id="chorus-fab-wrapper">
-            <button id="chorus-fab" title="The Chorus">
-                <div class="chorus-fab__front">
-                    <span class="chorus-fab__glyph">\u25C6</span>
-                </div>
-                <div class="chorus-fab__back">
-                    <span class="chorus-fab__back-glyph"></span>
-                    <span class="chorus-fab__back-name"></span>
-                    <span class="chorus-fab__back-badge">\u2726</span>
-                </div>
-            </button>
-        </div>`);
-        $container.append($fabWrapper);
+        // Move FAB wrapper out of panel so it's always visible
+        // (template already contains it, just reposition to container root)
+        $('#chorus-fab-wrapper').appendTo($container);
 
         setupDraggableFab();
 
