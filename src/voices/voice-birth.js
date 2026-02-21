@@ -26,6 +26,7 @@ import {
     addVoice,
     getLivingVoices,
     getArcana,
+    getTakenArcana,
     saveChatState,
 } from '../state.js';
 
@@ -165,33 +166,41 @@ function buildBirthPrompt(trigger, depth, options = {}) {
 
     const resolutionGuidance = getResolutionGuidance(depth);
 
+    // Arcana uniqueness — one voice per arcana
+    const taken = getTakenArcana();
+    const available = Object.keys(ARCANA).filter(k => !taken.includes(k));
+    const takenNote = taken.length > 0
+        ? `\nALREADY TAKEN (DO NOT USE): ${taken.join(', ')}`
+        : '';
+
     // Arcana selection with reversed support
     let arcanaBlock;
-    if (arcanaHint) {
+    if (arcanaHint && !taken.includes(arcanaHint)) {
         const arcDef = ARCANA[arcanaHint];
         if (reversed && arcDef) {
             arcanaBlock = `ASSIGNED ARCANA: ${arcanaHint} (REVERSED)
 UPRIGHT MEANING: ${arcDef.upright}
 REVERSED MEANING: ${arcDef.reversed}
-This voice is born from the SHADOW side of this arcana. The reversed meaning should color everything about this voice — its personality, blind spot, obsession. It's the dark mirror, the inverted lesson, the thing you do INSTEAD of what the card actually teaches.`;
+This voice is born from the SHADOW side of this arcana. The reversed meaning should color everything about this voice — its personality, blind spot, obsession. It's the dark mirror, the inverted lesson, the thing you do INSTEAD of what the card actually teaches.${takenNote}`;
         } else {
-            arcanaBlock = `SUGGESTED ARCANA: ${arcanaHint} (you may override if another fits better)`;
+            arcanaBlock = `SUGGESTED ARCANA: ${arcanaHint} (you may override if another fits better)${takenNote}`;
         }
     } else if (reversed) {
-        // Build reversed guidance for all arcana
         const reversedExamples = Object.entries(ARCANA)
-            .filter(([, v]) => v.reversed)
+            .filter(([k, v]) => v.reversed && !taken.includes(k))
             .slice(0, 5)
             .map(([key, v]) => `  ${key}: ${v.reversed}`)
             .join('\n');
-        arcanaBlock = `CHOOSE ARCANA from: ${Object.keys(ARCANA).join(', ')}
+        arcanaBlock = `CHOOSE ARCANA from AVAILABLE: ${available.join(', ')}${takenNote}
 THIS VOICE IS REVERSED. Choose an arcana, then build the voice from its SHADOW meaning:
 ${reversedExamples}
 (... and similar inversions for all arcana)
-The reversed voice embodies what happens when the card's lesson is refused, inverted, or corrupted.`;
+The reversed voice embodies what happens when the card's lesson is refused, inverted, or corrupted.
+The voice's personality MUST match the chosen arcana's thematic territory.`;
     } else {
-        arcanaBlock = `CHOOSE ARCANA from: ${Object.keys(ARCANA).join(', ')}
-You may also choose to make this voice REVERSED if the birth moment reflects the shadow/inverted aspect of an arcana. If reversed, set "reversed": true in your response and build the personality from the shadow meaning.`;
+        arcanaBlock = `CHOOSE ARCANA from AVAILABLE: ${available.join(', ')}${takenNote}
+You may also choose to make this voice REVERSED if the birth moment reflects the shadow/inverted aspect of an arcana. If reversed, set "reversed": true and build the personality from the shadow meaning.
+CRITICAL: The voice's personality, obsession, and blind spot MUST match the chosen arcana's thematic territory. A Tower voice is about catastrophe and collapse. A Lovers voice is about connection and choice. Don't force a mismatch.`;
     }
 
     // Birth type context
@@ -439,6 +448,19 @@ function parseBirthResponse(responseText, depth) {
         if (!ARCANA[parsed.arcana]) {
             console.warn(`${LOG_PREFIX} Invalid arcana "${parsed.arcana}", defaulting to fool`);
             parsed.arcana = 'fool';
+        }
+
+        // Enforce arcana uniqueness — one voice per arcana
+        const taken = getTakenArcana();
+        if (taken.includes(parsed.arcana)) {
+            // AI picked a taken arcana — find the best available alternative
+            const available = Object.keys(ARCANA).filter(k => !taken.includes(k));
+            if (available.length === 0) {
+                console.warn(`${LOG_PREFIX} All 22 arcana taken, cannot birth`);
+                return null;
+            }
+            console.warn(`${LOG_PREFIX} Arcana "${parsed.arcana}" already taken, reassigning to ${available[0]}`);
+            parsed.arcana = available[0];
         }
 
         // Validate influence triggers against taxonomy
@@ -725,7 +747,7 @@ export async function birthVoicesFromPersona() {
 
     try {
         const messages = buildPersonaExtractionPrompt(personaText, scenarioText, seedCount);
-        const responseText = await sendRequest(messages, 1500);
+        const responseText = await sendRequest(messages, 3000);
         const voices = parsePersonaExtractionResponse(responseText, seedCount);
 
         if (!voices || voices.length === 0) {
@@ -789,7 +811,7 @@ function getScenarioText() {
 
         // Only scenario — this is the situation {{user}} is walking into
         // Do NOT include char.description — that's the AI character, not {{user}}
-        return (char.scenario || '').substring(0, 600);
+        return (char.scenario || '').substring(0, 1200);
     } catch (e) {
         return '';
     }
@@ -865,6 +887,7 @@ Return this exact JSON array:
     {
         "name": "Voice Name",
         "arcana": "arcana_key",
+        "reversed": false,
         "depth": "core|rooted|surface",
         "birthMoment": "The specific aspect of the persona this voice was born from. 1-2 sentences.",
         "personality": "2-3 sentence personality description rooted in the persona.",
@@ -918,13 +941,13 @@ function parsePersonaExtractionResponse(responseText, expectedCount) {
         if (!Array.isArray(parsed)) return null;
 
         const results = [];
-        const usedArcana = new Set();
+        const usedArcana = new Set(getTakenArcana()); // Start with globally taken arcana
         const usedDomains = new Set();
 
         for (const raw of parsed) {
             if (!raw.name || !raw.personality) continue;
 
-            // Deduplicate arcana
+            // Deduplicate arcana (both within batch and globally)
             let arcana = raw.arcana;
             if (!ARCANA[arcana] || usedArcana.has(arcana)) {
                 arcana = Object.keys(ARCANA).find(k => !usedArcana.has(k)) || 'fool';
@@ -972,6 +995,7 @@ function parsePersonaExtractionResponse(responseText, expectedCount) {
             results.push({
                 name: raw.name,
                 arcana,
+                reversed: !!raw.reversed,
                 personality: raw.personality,
                 speakingStyle: raw.speakingStyle || '',
                 obsession: raw.obsession || '',

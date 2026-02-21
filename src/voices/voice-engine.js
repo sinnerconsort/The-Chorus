@@ -20,14 +20,14 @@ import {
     getLivingVoices,
     getVoiceById,
     getArcana,
+    getTakenArcana,
+    getWeakestVoice,
     adjustInfluence,
     updateVoice,
     resolveVoice,
     saveChatState,
     getEscalation,
     setEscalation,
-    getMessagesSinceLastDraw,
-    resetMessageCounter,
     updateThemeAccumulator,
     clearThemeAccumulation,
 } from '../state.js';
@@ -830,12 +830,16 @@ async function checkBirth(impact, themes, summary, messageText) {
     // Cooldown check
     if (Date.now() - lastBirthTime < BIRTH_COOLDOWN_MS) return null;
 
-    // Deck space check
+    // All 22 arcana taken — absolute cap
+    const taken = getTakenArcana();
+    if (taken.length >= 22) return null;
+
+    // Deck space check — try to make room if full
     const living = getLivingVoices();
-    if (living.length >= (extensionSettings.maxVoices || 7)) {
-        // If autoEgoDeath is enabled, we could force a sacrifice here
-        // For now, just block
-        return null;
+    const maxVoices = Math.min(22, extensionSettings.maxVoices || 7);
+    if (living.length >= maxVoices) {
+        const madeRoom = await makeRoomInDeck();
+        if (!madeRoom) return null;
     }
 
     // Birth sensitivity check — higher sensitivity = more births
@@ -857,6 +861,84 @@ async function checkBirth(impact, themes, summary, messageText) {
     } catch (e) {
         console.error(`${LOG_PREFIX} Birth check failed:`, e);
         return null;
+    }
+}
+
+/**
+ * Try to make room in a full deck based on fullDeckBehavior setting.
+ * Returns true if room was made, false if deck stays full.
+ */
+async function makeRoomInDeck() {
+    const behavior = extensionSettings.fullDeckBehavior || 'block';
+
+    switch (behavior) {
+        case 'block':
+            console.log(`${LOG_PREFIX} Deck full, behavior=block — no room`);
+            return false;
+
+        case 'heal': {
+            // Resolve the weakest non-core voice
+            const weakest = getWeakestVoice();
+            if (!weakest) return false;
+            console.log(`${LOG_PREFIX} Deck full, behavior=heal — resolving ${weakest.name} (inf:${weakest.influence})`);
+            resolveVoice(weakest.id, 'full deck heal');
+            return true;
+        }
+
+        case 'merge': {
+            // Find two overlapping voices and merge them
+            const living = getLivingVoices().filter(v => v.depth !== 'core');
+            for (let i = 0; i < living.length; i++) {
+                for (let j = i + 1; j < living.length; j++) {
+                    const aRaises = living[i].influenceTriggers?.raises || [];
+                    const bRaises = living[j].influenceTriggers?.raises || [];
+                    const shared = aRaises.filter(t => bRaises.includes(t));
+                    if (shared.length >= 1) {
+                        // Good enough overlap — force merge
+                        console.log(`${LOG_PREFIX} Deck full, behavior=merge — merging ${living[i].name} + ${living[j].name}`);
+                        const merged = await birthVoiceFromMerge(living[i], living[j]);
+                        if (merged) {
+                            resolveVoice(living[i].id, `merged into ${merged.name}`);
+                            resolveVoice(living[j].id, `merged into ${merged.name}`);
+                            return true; // Net -1 (removed 2, added 1), room for new birth
+                        }
+                    }
+                }
+            }
+            // No merge candidates — fall back to heal
+            const weakest = getWeakestVoice();
+            if (!weakest) return false;
+            resolveVoice(weakest.id, 'full deck merge fallback');
+            return true;
+        }
+
+        case 'consume': {
+            // Strongest eats weakest
+            const living = getLivingVoices();
+            const strongest = [...living].sort((a, b) => b.influence - a.influence)[0];
+            const weakest = getWeakestVoice();
+            if (!strongest || !weakest || strongest.id === weakest.id) return false;
+            console.log(`${LOG_PREFIX} Deck full, behavior=consume — ${strongest.name} devours ${weakest.name}`);
+
+            // Steal triggers
+            const preyRaises = weakest.influenceTriggers?.raises || [];
+            const predRaises = strongest.influenceTriggers?.raises || [];
+            const stolen = preyRaises.filter(t => !predRaises.includes(t)).slice(0, 2);
+            if (stolen.length > 0) {
+                updateVoice(strongest.id, {
+                    influenceTriggers: {
+                        ...strongest.influenceTriggers,
+                        raises: [...predRaises, ...stolen],
+                    },
+                });
+            }
+            adjustInfluence(strongest.id, 10);
+            resolveVoice(weakest.id, `consumed by ${strongest.name}`);
+            return true;
+        }
+
+        default:
+            return false;
     }
 }
 
@@ -1142,32 +1224,56 @@ async function handleCardDraw(impact, themes, summary) {
     const living = getLivingVoices();
     if (living.length === 0) return null;
 
-    // Auto mode: determine spread type from impact
-    // Significant/critical always draw immediately (override frequency)
-    // None/minor respect draw frequency
+    // ── Auto mode: single card every message, spread on severity ──
+    // Severity setting controls the upgrade threshold:
+    //   low:    minor+ → 3-card,   significant+ → 5-card
+    //   medium: significant+ → 3-card, critical → 5-card
+    //   high:   critical → 3-card only (never auto 5-card)
 
-    if (impact === 'critical') {
+    const severity = extensionSettings.spreadSeverity || 'medium';
+
+    // Check for spread upgrade first
+    if (shouldUpgradeToSpread(impact, severity, 'cross')) {
         const cards = await generateSpread('cross', themes, summary);
-        if (!cards || cards.length === 0) return null;
-        resetMessageCounter();
-        return { type: 'cross', cards };
+        if (cards && cards.length > 0) {
+            return { type: 'cross', cards };
+        }
     }
 
-    if (impact === 'significant') {
+    if (shouldUpgradeToSpread(impact, severity, 'three')) {
         const cards = await generateSpread('three', themes, summary);
-        if (!cards || cards.length === 0) return null;
-        resetMessageCounter();
-        return { type: 'three', cards };
+        if (cards && cards.length > 0) {
+            return { type: 'three', cards };
+        }
     }
 
-    // None/minor — single card pull, respecting frequency
-    const freq = extensionSettings.drawFrequency || 3;
-    const msgCount = getMessagesSinceLastDraw();
-    if (msgCount < freq) return null;
+    // Default: single card pull every message
+    return await generateSingleCard(themes, summary);
+}
 
-    const card = await generateSingleCard(themes, summary);
-    if (card) resetMessageCounter();
-    return card;
+/**
+ * Check if impact + severity setting warrants upgrading to a spread.
+ */
+function shouldUpgradeToSpread(impact, severity, spreadType) {
+    if (spreadType === 'cross') {
+        // 5-card cross spread
+        switch (severity) {
+            case 'low':    return impact === 'significant' || impact === 'critical';
+            case 'medium': return impact === 'critical';
+            case 'high':   return false; // Never auto-trigger 5-card
+            default:       return impact === 'critical';
+        }
+    }
+    if (spreadType === 'three') {
+        // 3-card spread (only if we didn't already trigger a cross)
+        switch (severity) {
+            case 'low':    return impact === 'minor';
+            case 'medium': return impact === 'significant';
+            case 'high':   return impact === 'critical';
+            default:       return impact === 'significant';
+        }
+    }
+    return false;
 }
 
 // =============================================================================
