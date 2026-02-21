@@ -250,12 +250,21 @@ export function renderDeck() {
     const $spread = $('#chorus-card-spread');
     $spread.empty();
 
-    voices.forEach(voice => {
+    // Separate living from dead
+    const living = voices.filter(v => v.state !== 'dead');
+    const dead = voices.filter(v => v.state === 'dead');
+
+    // Sort living: agitated first, then active, then dormant
+    const stateOrder = { hijacking: 0, agitated: 1, active: 2, dormant: 3 };
+    living.sort((a, b) => (stateOrder[a.state] ?? 4) - (stateOrder[b.state] ?? 4));
+
+    // Render living cards
+    living.forEach(voice => {
         $spread.append(buildTarotCard(voice));
     });
 
-    // Empty slots
-    const emptySlots = Math.max(0, extensionSettings.maxVoices - voices.length);
+    // Empty slots (only count living toward max)
+    const emptySlots = Math.max(0, extensionSettings.maxVoices - living.length);
     for (let i = 0; i < emptySlots; i++) {
         $spread.append(`
             <div class="chorus-tarot--empty">
@@ -263,6 +272,19 @@ export function renderDeck() {
                 <div class="chorus-empty-label">AWAITING</div>
             </div>
         `);
+    }
+
+    // Graveyard section (dead cards, if any)
+    if (dead.length > 0) {
+        $spread.append(`
+            <div class="chorus-graveyard">
+                <div class="chorus-graveyard__label">⸸ GRAVEYARD ⸸</div>
+                <div class="chorus-graveyard__subtitle">${dead.length} silenced</div>
+            </div>
+        `);
+        dead.forEach(voice => {
+            $spread.append(buildTarotCard(voice));
+        });
     }
 
     // Card flips
