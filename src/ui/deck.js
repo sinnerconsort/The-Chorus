@@ -154,375 +154,461 @@ function buildTarotCard(voice) {
 }
 
 // =============================================================================
-// CANVAS GENERATIVE ART — Unique visual thumbprints per voice
+// CANVAS GENERATIVE ART — Bold arcana symbols, Persona-style
 // =============================================================================
 
-// Seeded PRNG for deterministic art per voice
-function seededRng(seed) {
-    let s = seed;
-    return () => {
-        s = (s * 1664525 + 1013904223) & 0xffffffff;
-        return (s >>> 0) / 0xffffffff;
-    };
-}
-
-function hashString(str) {
-    let h = 0;
-    for (let i = 0; i < str.length; i++) {
-        h = ((h << 5) - h + str.charCodeAt(i)) | 0;
-    }
-    return Math.abs(h);
-}
-
 /**
- * Get RGB color modified by voice relationship (mood).
- * Warmer relationships → brighter, more saturated
- * Colder/hostile → darker, desaturated
- * Obsessed/manic → oversaturated, high contrast
+ * Mood color: relationship shifts brightness/saturation of base arcana color.
+ * Warm → brighter. Cold → darker. Obsessed → oversaturated.
  */
 function getMoodColor(r, g, b, relationship) {
     const mods = {
-        devoted:     { brightness: 1.3,  saturation: 1.2  },
-        warm:        { brightness: 1.15, saturation: 1.1  },
-        curious:     { brightness: 1.05, saturation: 1.05 },
-        neutral:     { brightness: 1.0,  saturation: 1.0  },
-        indifferent: { brightness: 0.7,  saturation: 0.6  },
-        resentful:   { brightness: 0.8,  saturation: 0.8  },
-        hostile:     { brightness: 0.65, saturation: 0.7  },
-        obsessed:    { brightness: 1.2,  saturation: 1.4  },
-        manic:       { brightness: 1.35, saturation: 1.5  },
-        grieving:    { brightness: 0.6,  saturation: 0.5  },
+        devoted:     { br: 1.3,  sat: 1.2  },
+        warm:        { br: 1.15, sat: 1.1  },
+        curious:     { br: 1.05, sat: 1.05 },
+        neutral:     { br: 1.0,  sat: 1.0  },
+        indifferent: { br: 0.7,  sat: 0.6  },
+        resentful:   { br: 0.8,  sat: 0.8  },
+        hostile:     { br: 0.65, sat: 0.7  },
+        obsessed:    { br: 1.2,  sat: 1.4  },
+        manic:       { br: 1.35, sat: 1.5  },
+        grieving:    { br: 0.6,  sat: 0.5  },
     };
-    const mod = mods[relationship] || mods.neutral;
-
-    // Convert to HSL-ish manipulation via brightness/saturation
+    const m = mods[relationship] || mods.neutral;
     const avg = (r + g + b) / 3;
-    const nr = Math.min(255, Math.round((r + (r - avg) * (mod.saturation - 1)) * mod.brightness));
-    const ng = Math.min(255, Math.round((g + (g - avg) * (mod.saturation - 1)) * mod.brightness));
-    const nb = Math.min(255, Math.round((b + (b - avg) * (mod.saturation - 1)) * mod.brightness));
-    return { r: Math.max(0, nr), g: Math.max(0, ng), b: Math.max(0, nb) };
+    return {
+        r: Math.max(0, Math.min(255, Math.round((r + (r - avg) * (m.sat - 1)) * m.br))),
+        g: Math.max(0, Math.min(255, Math.round((g + (g - avg) * (m.sat - 1)) * m.br))),
+        b: Math.max(0, Math.min(255, Math.round((b + (b - avg) * (m.sat - 1)) * m.br))),
+    };
 }
 
-// --- Shape Layer Drawing Functions ---
+// --- Per-arcana symbol drawers ---
+// Each receives (ctx, cx, cy, scale, time) where scale~1.0, time is slow clock.
+// Draw FILLED, BOLD shapes. Canvas is 150×148.
 
-/** Sigil: polygon inscribed in circle with radial lines */
-function drawSigil(ctx, cx, cy, r, g, b, intensity, time, rng) {
-    const sides = 3 + Math.floor(rng() * 5);     // 3-7 sides
-    const radius = 26 + rng() * 12;
-    const outerR = 44 + rng() * 8;
-    const rotation = rng() * Math.PI * 2;
+const ARCANA_SYMBOLS = {
 
-    // Outer circle
-    ctx.strokeStyle = `rgba(${r},${g},${b},${0.25 + intensity * 0.2})`;
-    ctx.lineWidth = 1.2;
-    ctx.beginPath();
-    ctx.arc(cx, cy, outerR + Math.sin(time) * 2 * intensity, 0, Math.PI * 2);
-    ctx.stroke();
-
-    // Inner polygon
-    ctx.strokeStyle = `rgba(${r},${g},${b},${0.4 + intensity * 0.3})`;
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    for (let i = 0; i <= sides; i++) {
-        const a = (i / sides) * Math.PI * 2 + rotation + time * 0.4;
-        const rad = radius + Math.sin(time + i * 0.7) * 4 * intensity;
-        const x = cx + Math.cos(a) * rad;
-        const y = cy + Math.sin(a) * rad;
-        i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
-    }
-    ctx.closePath();
-    ctx.stroke();
-
-    // Radial lines from center to polygon vertices
-    for (let i = 0; i < sides; i++) {
-        const a = (i / sides) * Math.PI * 2 + rotation + time * 0.2;
-        ctx.strokeStyle = `rgba(${r},${g},${b},${0.15 + intensity * 0.15})`;
+    // 0 — THE FOOL: circle with a gap (the leap)
+    fool(ctx, cx, cy, s, t) {
+        const r = 36 * s;
+        const gapAngle = -Math.PI / 2;
+        const gapSize = 0.5 + Math.sin(t) * 0.1;
+        ctx.lineWidth = 5 * s;
         ctx.beginPath();
-        ctx.moveTo(cx, cy);
-        ctx.lineTo(cx + Math.cos(a) * outerR, cy + Math.sin(a) * outerR);
+        ctx.arc(cx, cy, r, gapAngle + gapSize, gapAngle + Math.PI * 2 - gapSize);
         ctx.stroke();
-    }
-}
+        // Small circle "stepping" into the gap
+        const dotAngle = gapAngle + Math.sin(t * 0.8) * 0.15;
+        ctx.beginPath();
+        ctx.arc(cx + Math.cos(dotAngle) * (r + 10 * s), cy + Math.sin(dotAngle) * (r + 10 * s), 5 * s, 0, Math.PI * 2);
+        ctx.fill();
+    },
 
-/** Constellation: scattered points connected by thin lines */
-function drawConstellation(ctx, cx, cy, r, g, b, intensity, time, rng) {
-    const count = 6 + Math.floor(rng() * 8);
-    const stars = [];
-    for (let i = 0; i < count; i++) {
-        const angle = rng() * Math.PI * 2;
-        const dist = 12 + rng() * 38;
-        stars.push({
-            x: cx + Math.cos(angle) * dist + Math.sin(time * 0.5 + i) * 2 * intensity,
-            y: cy + Math.sin(angle) * dist + Math.cos(time * 0.5 + i) * 2 * intensity,
-            size: 1.5 + rng() * 2.5,
-            bright: 0.3 + rng() * 0.5,
-        });
-    }
+    // I — THE MAGICIAN: infinity / lemniscate
+    magician(ctx, cx, cy, s, t) {
+        ctx.lineWidth = 4.5 * s;
+        ctx.beginPath();
+        for (let i = 0; i <= 100; i++) {
+            const a = (i / 100) * Math.PI * 2;
+            const scale = 32 * s;
+            const x = cx + scale * Math.cos(a) / (1 + Math.sin(a) ** 2);
+            const y = cy + scale * Math.sin(a) * Math.cos(a) / (1 + Math.sin(a) ** 2);
+            i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+        }
+        ctx.stroke();
+        // Center dot
+        ctx.beginPath();
+        ctx.arc(cx, cy, 4 * s, 0, Math.PI * 2);
+        ctx.fill();
+    },
 
-    // Connection lines (nearest neighbor style)
-    ctx.lineWidth = 0.5;
-    for (let i = 0; i < stars.length; i++) {
-        const s = stars[i];
-        // Connect to 1-2 nearest
-        const connections = Math.floor(rng() * 2) + 1;
-        for (let c = 0; c < connections && c + i + 1 < stars.length; c++) {
-            const t = stars[(i + c + 1) % stars.length];
-            ctx.strokeStyle = `rgba(${r},${g},${b},${0.1 + intensity * 0.15})`;
+    // II — HIGH PRIESTESS: crescent between two pillars
+    priestess(ctx, cx, cy, s, t) {
+        const pw = 6 * s, ph = 50 * s;
+        // Pillars
+        ctx.fillRect(cx - 28 * s, cy - ph / 2, pw, ph);
+        ctx.fillRect(cx + 22 * s, cy - ph / 2, pw, ph);
+        // Crescent moon between
+        ctx.beginPath();
+        ctx.arc(cx, cy, 16 * s, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.save();
+        ctx.globalCompositeOperation = 'destination-out';
+        ctx.beginPath();
+        ctx.arc(cx + 8 * s, cy, 14 * s, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+    },
+
+    // III — THE EMPRESS: Venus symbol ♀
+    empress(ctx, cx, cy, s, t) {
+        const r = 22 * s;
+        ctx.lineWidth = 5 * s;
+        // Circle
+        ctx.beginPath();
+        ctx.arc(cx, cy - 8 * s, r, 0, Math.PI * 2);
+        ctx.stroke();
+        // Stem
+        ctx.beginPath();
+        ctx.moveTo(cx, cy - 8 * s + r);
+        ctx.lineTo(cx, cy + 30 * s);
+        ctx.stroke();
+        // Cross bar
+        ctx.beginPath();
+        ctx.moveTo(cx - 14 * s, cy + 18 * s);
+        ctx.lineTo(cx + 14 * s, cy + 18 * s);
+        ctx.stroke();
+    },
+
+    // IV — THE EMPEROR: angular crown
+    emperor(ctx, cx, cy, s, t) {
+        ctx.lineWidth = 2 * s;
+        const w = 40 * s, h = 30 * s;
+        // Crown shape — filled
+        ctx.beginPath();
+        ctx.moveTo(cx - w, cy + h * 0.3);
+        ctx.lineTo(cx - w * 0.6, cy - h);
+        ctx.lineTo(cx - w * 0.2, cy - h * 0.2);
+        ctx.lineTo(cx, cy - h * 1.1);
+        ctx.lineTo(cx + w * 0.2, cy - h * 0.2);
+        ctx.lineTo(cx + w * 0.6, cy - h);
+        ctx.lineTo(cx + w, cy + h * 0.3);
+        ctx.closePath();
+        ctx.fill();
+        // Base bar
+        ctx.fillRect(cx - w, cy + h * 0.3, w * 2, 8 * s);
+    },
+
+    // V — THE HIEROPHANT: triple cross / papal cross
+    hierophant(ctx, cx, cy, s, t) {
+        ctx.lineWidth = 5 * s;
+        // Vertical
+        ctx.beginPath();
+        ctx.moveTo(cx, cy - 38 * s);
+        ctx.lineTo(cx, cy + 38 * s);
+        ctx.stroke();
+        // Three horizontal bars (widening)
+        const bars = [{ y: -26, w: 14 }, { y: -10, w: 20 }, { y: 8, w: 26 }];
+        for (const b of bars) {
             ctx.beginPath();
-            ctx.moveTo(s.x, s.y);
-            ctx.lineTo(t.x, t.y);
+            ctx.moveTo(cx - b.w * s, cy + b.y * s);
+            ctx.lineTo(cx + b.w * s, cy + b.y * s);
             ctx.stroke();
         }
-    }
+    },
 
-    // Star dots
-    for (const s of stars) {
-        const flicker = 0.7 + Math.sin(time * 3 + s.x) * 0.3 * intensity;
-        ctx.fillStyle = `rgba(${r},${g},${b},${s.bright * flicker})`;
+    // VI — THE LOVERS: two overlapping circles
+    lovers(ctx, cx, cy, s, t) {
+        const r = 22 * s;
+        const sep = 14 * s;
+        ctx.lineWidth = 4 * s;
         ctx.beginPath();
-        ctx.arc(s.x, s.y, s.size, 0, Math.PI * 2);
+        ctx.arc(cx - sep, cy, r, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.arc(cx + sep, cy, r, 0, Math.PI * 2);
+        ctx.stroke();
+        // Filled intersection hint
+        ctx.globalAlpha = 0.3;
+        ctx.beginPath();
+        ctx.arc(cx - sep, cy, r, 0, Math.PI * 2);
         ctx.fill();
-    }
-}
-
-/** Ripple: concentric circles emanating from center */
-function drawRipple(ctx, cx, cy, r, g, b, intensity, time, rng) {
-    const rings = 3 + Math.floor(rng() * 4);
-    const baseSpacing = 10 + rng() * 6;
-    const offset = rng() * 20;
-
-    for (let i = 0; i < rings; i++) {
-        const radius = offset + (i + 1) * baseSpacing + Math.sin(time * 0.8 + i * 1.2) * 3 * intensity;
-        const alpha = (0.4 - i * 0.06) + intensity * 0.2;
-        ctx.strokeStyle = `rgba(${r},${g},${b},${Math.max(0.05, alpha)})`;
-        ctx.lineWidth = 1.5 - i * 0.15;
         ctx.beginPath();
-        // Slightly irregular circles
-        for (let a = 0; a <= 64; a++) {
-            const angle = (a / 64) * Math.PI * 2;
-            const wobble = Math.sin(angle * 3 + time + i) * 2 * intensity;
-            const x = cx + Math.cos(angle) * (radius + wobble);
-            const y = cy + Math.sin(angle) * (radius + wobble);
-            a === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
-        }
+        ctx.arc(cx + sep, cy, r, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalAlpha = 1;
+    },
+
+    // VII — THE CHARIOT: bold upward arrow
+    chariot(ctx, cx, cy, s, t) {
+        ctx.beginPath();
+        ctx.moveTo(cx, cy - 40 * s);
+        ctx.lineTo(cx + 28 * s, cy + 5 * s);
+        ctx.lineTo(cx + 12 * s, cy + 5 * s);
+        ctx.lineTo(cx + 12 * s, cy + 36 * s);
+        ctx.lineTo(cx - 12 * s, cy + 36 * s);
+        ctx.lineTo(cx - 12 * s, cy + 5 * s);
+        ctx.lineTo(cx - 28 * s, cy + 5 * s);
         ctx.closePath();
+        ctx.fill();
+    },
+
+    // VIII — STRENGTH: infinity above a filled circle
+    strength(ctx, cx, cy, s, t) {
+        // Lemniscate on top
+        ctx.lineWidth = 4 * s;
+        ctx.beginPath();
+        for (let i = 0; i <= 80; i++) {
+            const a = (i / 80) * Math.PI * 2;
+            const sc = 20 * s;
+            const x = cx + sc * Math.cos(a) / (1 + Math.sin(a) ** 2);
+            const y = (cy - 16 * s) + sc * 0.6 * Math.sin(a) * Math.cos(a) / (1 + Math.sin(a) ** 2);
+            i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+        }
         ctx.stroke();
-    }
-}
-
-/** Lattice: grid pattern with nodes and connecting lines */
-function drawLattice(ctx, cx, cy, r, g, b, intensity, time, rng) {
-    const cols = 3 + Math.floor(rng() * 3);
-    const rows = 3 + Math.floor(rng() * 3);
-    const spacing = 16 + rng() * 6;
-    const angleOffset = rng() * 0.5 - 0.25;  // Slight rotation
-
-    const nodes = [];
-    const startX = cx - (cols - 1) * spacing / 2;
-    const startY = cy - (rows - 1) * spacing / 2;
-
-    for (let row = 0; row < rows; row++) {
-        for (let col = 0; col < cols; col++) {
-            const bx = startX + col * spacing;
-            const by = startY + row * spacing;
-            // Rotate around center
-            const dx = bx - cx, dy = by - cy;
-            const x = cx + dx * Math.cos(angleOffset) - dy * Math.sin(angleOffset);
-            const y = cy + dx * Math.sin(angleOffset) + dy * Math.cos(angleOffset);
-            // Breathing motion
-            const mx = x + Math.sin(time * 0.6 + col + row) * 3 * intensity;
-            const my = y + Math.cos(time * 0.6 + col * 2) * 3 * intensity;
-            nodes.push({ x: mx, y: my, col, row });
-        }
-    }
-
-    // Connections
-    ctx.lineWidth = 0.7;
-    for (const n of nodes) {
-        const right = nodes.find(o => o.col === n.col + 1 && o.row === n.row);
-        const down = nodes.find(o => o.col === n.col && o.row === n.row + 1);
-        ctx.strokeStyle = `rgba(${r},${g},${b},${0.15 + intensity * 0.15})`;
-        if (right) { ctx.beginPath(); ctx.moveTo(n.x, n.y); ctx.lineTo(right.x, right.y); ctx.stroke(); }
-        if (down) { ctx.beginPath(); ctx.moveTo(n.x, n.y); ctx.lineTo(down.x, down.y); ctx.stroke(); }
-    }
-
-    // Nodes
-    for (const n of nodes) {
-        const pulse = 0.6 + Math.sin(time * 2 + n.col + n.row * 3) * 0.3 * intensity;
-        ctx.fillStyle = `rgba(${r},${g},${b},${0.3 * pulse + intensity * 0.3})`;
+        // Solid circle below
         ctx.beginPath();
-        ctx.arc(n.x, n.y, 2 + intensity * 1.5, 0, Math.PI * 2);
+        ctx.arc(cx, cy + 18 * s, 18 * s, 0, Math.PI * 2);
         ctx.fill();
-    }
-}
+    },
 
-/** Spiral: golden spiral or nautilus */
-function drawSpiral(ctx, cx, cy, r, g, b, intensity, time, rng) {
-    const turns = 2 + rng() * 3;
-    const direction = rng() > 0.5 ? 1 : -1;
-    const growth = 1.5 + rng() * 1.5;
-    const startAngle = rng() * Math.PI * 2;
-
-    ctx.strokeStyle = `rgba(${r},${g},${b},${0.35 + intensity * 0.3})`;
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-
-    const steps = 120;
-    for (let i = 0; i <= steps; i++) {
-        const t = i / steps;
-        const angle = startAngle + t * turns * Math.PI * 2 * direction + time * 0.3;
-        const radius = 4 + t * 42 * (growth / 2.5);
-        const wobble = Math.sin(t * 10 + time) * 2 * intensity;
-        const x = cx + Math.cos(angle) * (radius + wobble);
-        const y = cy + Math.sin(angle) * (radius + wobble);
-        i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
-    }
-    ctx.stroke();
-
-    // Accent dots along spiral
-    for (let i = 0; i < 5; i++) {
-        const t = (i + 1) / 6;
-        const angle = startAngle + t * turns * Math.PI * 2 * direction + time * 0.3;
-        const radius = 4 + t * 42 * (growth / 2.5);
-        const x = cx + Math.cos(angle) * radius;
-        const y = cy + Math.sin(angle) * radius;
-        ctx.fillStyle = `rgba(${r},${g},${b},${0.4 + intensity * 0.3})`;
+    // IX — THE HERMIT: lantern (diamond on a line)
+    hermit(ctx, cx, cy, s, t) {
+        // Staff
+        ctx.lineWidth = 4 * s;
         ctx.beginPath();
-        ctx.arc(x, y, 1.5 + intensity, 0, Math.PI * 2);
-        ctx.fill();
-    }
-}
-
-/** Orbit: elliptical paths around center */
-function drawOrbit(ctx, cx, cy, r, g, b, intensity, time, rng) {
-    const orbits = 2 + Math.floor(rng() * 3);
-
-    for (let i = 0; i < orbits; i++) {
-        const rx = 20 + rng() * 30;
-        const ry = 12 + rng() * 24;
-        const tilt = rng() * Math.PI;
-        const speed = (0.3 + rng() * 0.4) * (rng() > 0.5 ? 1 : -1);
-
-        // Orbit path
-        ctx.strokeStyle = `rgba(${r},${g},${b},${0.12 + intensity * 0.12})`;
-        ctx.lineWidth = 0.6;
+        ctx.moveTo(cx, cy - 10 * s);
+        ctx.lineTo(cx, cy + 40 * s);
+        ctx.stroke();
+        // Lantern diamond
+        const lcy = cy - 20 * s;
+        const d = 18 * s;
         ctx.beginPath();
-        for (let a = 0; a <= 64; a++) {
-            const angle = (a / 64) * Math.PI * 2;
-            const ox = Math.cos(angle) * rx;
-            const oy = Math.sin(angle) * ry;
-            const x = cx + ox * Math.cos(tilt) - oy * Math.sin(tilt);
-            const y = cy + ox * Math.sin(tilt) + oy * Math.cos(tilt);
-            a === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
-        }
+        ctx.moveTo(cx, lcy - d);
+        ctx.lineTo(cx + d * 0.7, lcy);
+        ctx.lineTo(cx, lcy + d);
+        ctx.lineTo(cx - d * 0.7, lcy);
         ctx.closePath();
-        ctx.stroke();
-
-        // Orbiting body
-        const bodyAngle = time * speed + i * 2;
-        const bx = Math.cos(bodyAngle) * rx;
-        const by = Math.sin(bodyAngle) * ry;
-        const x = cx + bx * Math.cos(tilt) - by * Math.sin(tilt);
-        const y = cy + bx * Math.sin(tilt) + by * Math.cos(tilt);
-        ctx.fillStyle = `rgba(${r},${g},${b},${0.5 + intensity * 0.4})`;
-        ctx.beginPath();
-        ctx.arc(x, y, 2.5 + intensity * 1.5, 0, Math.PI * 2);
         ctx.fill();
-    }
-}
+    },
 
-/** Rune: angular intersecting lines, norse/symbolic */
-function drawRune(ctx, cx, cy, r, g, b, intensity, time, rng) {
-    const lines = 3 + Math.floor(rng() * 4);
-    const segments = [];
-
-    // Generate angular line segments
-    for (let i = 0; i < lines; i++) {
-        const angle = rng() * Math.PI;
-        const len = 20 + rng() * 30;
-        const offX = (rng() - 0.5) * 20;
-        const offY = (rng() - 0.5) * 20;
-        segments.push({
-            x1: cx + offX - Math.cos(angle) * len / 2,
-            y1: cy + offY - Math.sin(angle) * len / 2,
-            x2: cx + offX + Math.cos(angle) * len / 2,
-            y2: cy + offY + Math.sin(angle) * len / 2,
-        });
-    }
-
-    // Draw with slight breathing
-    ctx.lineWidth = 1.5;
-    ctx.lineCap = 'round';
-    for (let i = 0; i < segments.length; i++) {
-        const s = segments[i];
-        const breathe = Math.sin(time * 0.5 + i) * 2 * intensity;
-        ctx.strokeStyle = `rgba(${r},${g},${b},${0.3 + intensity * 0.3})`;
+    // X — WHEEL OF FORTUNE: circle with spokes and inner ring
+    wheel(ctx, cx, cy, s, t) {
+        const r = 34 * s;
+        ctx.lineWidth = 4 * s;
+        // Outer ring
         ctx.beginPath();
-        ctx.moveTo(s.x1 + breathe, s.y1);
-        ctx.lineTo(s.x2 - breathe, s.y2);
+        ctx.arc(cx, cy, r, 0, Math.PI * 2);
         ctx.stroke();
-    }
-    ctx.lineCap = 'butt';
-
-    // Intersection accents
-    for (let i = 0; i < segments.length - 1; i++) {
-        const mid = {
-            x: (segments[i].x1 + segments[i].x2) / 2,
-            y: (segments[i].y1 + segments[i].y2) / 2,
-        };
-        ctx.fillStyle = `rgba(${r},${g},${b},${0.4 + intensity * 0.3})`;
+        // Inner ring
         ctx.beginPath();
-        ctx.arc(mid.x, mid.y, 2, 0, Math.PI * 2);
+        ctx.arc(cx, cy, 14 * s, 0, Math.PI * 2);
+        ctx.stroke();
+        // 8 spokes
+        for (let i = 0; i < 8; i++) {
+            const a = (i / 8) * Math.PI * 2 + t * 0.3;
+            ctx.lineWidth = 3 * s;
+            ctx.beginPath();
+            ctx.moveTo(cx + Math.cos(a) * 14 * s, cy + Math.sin(a) * 14 * s);
+            ctx.lineTo(cx + Math.cos(a) * r, cy + Math.sin(a) * r);
+            ctx.stroke();
+        }
+    },
+
+    // XI — JUSTICE: balanced scales
+    justice(ctx, cx, cy, s, t) {
+        ctx.lineWidth = 4 * s;
+        // Beam
+        ctx.beginPath();
+        ctx.moveTo(cx - 34 * s, cy - 8 * s);
+        ctx.lineTo(cx + 34 * s, cy - 8 * s);
+        ctx.stroke();
+        // Fulcrum triangle
+        ctx.beginPath();
+        ctx.moveTo(cx, cy - 8 * s);
+        ctx.lineTo(cx - 10 * s, cy + 20 * s);
+        ctx.lineTo(cx + 10 * s, cy + 20 * s);
+        ctx.closePath();
         ctx.fill();
-    }
-}
+        // Pans (arcs)
+        ctx.lineWidth = 3.5 * s;
+        ctx.beginPath();
+        ctx.arc(cx - 28 * s, cy - 4 * s, 14 * s, 0, Math.PI);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.arc(cx + 28 * s, cy - 4 * s, 14 * s, 0, Math.PI);
+        ctx.stroke();
+    },
 
-/** Bloom: petal/flower pattern, organic */
-function drawBloom(ctx, cx, cy, r, g, b, intensity, time, rng) {
-    const petals = 4 + Math.floor(rng() * 5);
-    const petalLen = 18 + rng() * 18;
-    const petalWidth = 6 + rng() * 8;
-    const rotation = rng() * Math.PI * 2 + time * 0.2;
+    // XII — HANGED MAN: inverted cross / ankh variant
+    hanged(ctx, cx, cy, s, t) {
+        // Inverted triangle
+        ctx.beginPath();
+        ctx.moveTo(cx, cy + 28 * s);
+        ctx.lineTo(cx - 24 * s, cy - 16 * s);
+        ctx.lineTo(cx + 24 * s, cy - 16 * s);
+        ctx.closePath();
+        ctx.fill();
+        // Circle at top (the head)
+        ctx.lineWidth = 4 * s;
+        ctx.beginPath();
+        ctx.arc(cx, cy - 28 * s, 12 * s, 0, Math.PI * 2);
+        ctx.stroke();
+        // Line connecting
+        ctx.lineWidth = 4 * s;
+        ctx.beginPath();
+        ctx.moveTo(cx, cy - 16 * s);
+        ctx.lineTo(cx, cy - 16 * s);
+        ctx.stroke();
+    },
 
-    for (let i = 0; i < petals; i++) {
-        const angle = rotation + (i / petals) * Math.PI * 2;
-        const breathe = 1 + Math.sin(time * 0.8 + i) * 0.15 * intensity;
-        const tipX = cx + Math.cos(angle) * petalLen * breathe;
-        const tipY = cy + Math.sin(angle) * petalLen * breathe;
+    // XIII — DEATH: scythe blade
+    death(ctx, cx, cy, s, t) {
+        // Staff
+        ctx.lineWidth = 4 * s;
+        ctx.beginPath();
+        ctx.moveTo(cx + 5 * s, cy - 36 * s);
+        ctx.lineTo(cx - 5 * s, cy + 36 * s);
+        ctx.stroke();
+        // Blade — curved filled shape
+        ctx.beginPath();
+        ctx.moveTo(cx + 5 * s, cy - 36 * s);
+        ctx.quadraticCurveTo(cx + 40 * s, cy - 28 * s, cx + 34 * s, cy - 4 * s);
+        ctx.quadraticCurveTo(cx + 24 * s, cy - 10 * s, cx + 2 * s, cy - 18 * s);
+        ctx.closePath();
+        ctx.fill();
+    },
 
-        // Petal as quadratic curve
-        const perpAngle = angle + Math.PI / 2;
-        const cpDist = petalWidth * breathe;
-
-        ctx.strokeStyle = `rgba(${r},${g},${b},${0.25 + intensity * 0.25})`;
-        ctx.lineWidth = 0.8;
+    // XIV — TEMPERANCE: two cups / hourglass
+    temperance(ctx, cx, cy, s, t) {
+        // Top triangle (inverted)
+        ctx.beginPath();
+        ctx.moveTo(cx - 24 * s, cy - 32 * s);
+        ctx.lineTo(cx + 24 * s, cy - 32 * s);
+        ctx.lineTo(cx, cy);
+        ctx.closePath();
+        ctx.fill();
+        // Bottom triangle
         ctx.beginPath();
         ctx.moveTo(cx, cy);
-        ctx.quadraticCurveTo(
-            cx + Math.cos(angle) * petalLen * 0.5 + Math.cos(perpAngle) * cpDist,
-            cy + Math.sin(angle) * petalLen * 0.5 + Math.sin(perpAngle) * cpDist,
-            tipX, tipY
-        );
-        ctx.stroke();
-        ctx.beginPath();
-        ctx.moveTo(cx, cy);
-        ctx.quadraticCurveTo(
-            cx + Math.cos(angle) * petalLen * 0.5 - Math.cos(perpAngle) * cpDist,
-            cy + Math.sin(angle) * petalLen * 0.5 - Math.sin(perpAngle) * cpDist,
-            tipX, tipY
-        );
-        ctx.stroke();
-
-        // Petal tip dot
-        ctx.fillStyle = `rgba(${r},${g},${b},${0.35 + intensity * 0.3})`;
-        ctx.beginPath();
-        ctx.arc(tipX, tipY, 1.5, 0, Math.PI * 2);
+        ctx.lineTo(cx - 24 * s, cy + 32 * s);
+        ctx.lineTo(cx + 24 * s, cy + 32 * s);
+        ctx.closePath();
         ctx.fill();
-    }
-}
+    },
 
-// Shape family registry
-const SHAPE_FAMILIES = [drawSigil, drawConstellation, drawRipple, drawLattice, drawSpiral, drawOrbit, drawRune, drawBloom];
+    // XV — THE DEVIL: horns / inverted pentagram simplified
+    devil(ctx, cx, cy, s, t) {
+        // Two horns
+        ctx.lineWidth = 5 * s;
+        ctx.beginPath();
+        ctx.moveTo(cx - 12 * s, cy + 20 * s);
+        ctx.quadraticCurveTo(cx - 30 * s, cy - 20 * s, cx - 18 * s, cy - 38 * s);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(cx + 12 * s, cy + 20 * s);
+        ctx.quadraticCurveTo(cx + 30 * s, cy - 20 * s, cx + 18 * s, cy - 38 * s);
+        ctx.stroke();
+        // Filled circle between
+        ctx.beginPath();
+        ctx.arc(cx, cy + 10 * s, 16 * s, 0, Math.PI * 2);
+        ctx.fill();
+        // Horn tips
+        ctx.beginPath();
+        ctx.arc(cx - 18 * s, cy - 38 * s, 4 * s, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(cx + 18 * s, cy - 38 * s, 4 * s, 0, Math.PI * 2);
+        ctx.fill();
+    },
+
+    // XVI — THE TOWER: lightning bolt
+    tower(ctx, cx, cy, s, t) {
+        ctx.beginPath();
+        ctx.moveTo(cx + 4 * s, cy - 40 * s);
+        ctx.lineTo(cx - 14 * s, cy - 6 * s);
+        ctx.lineTo(cx + 2 * s, cy - 6 * s);
+        ctx.lineTo(cx - 10 * s, cy + 40 * s);
+        ctx.lineTo(cx + 18 * s, cy + 4 * s);
+        ctx.lineTo(cx + 2 * s, cy + 4 * s);
+        ctx.lineTo(cx + 20 * s, cy - 40 * s);
+        ctx.closePath();
+        ctx.fill();
+    },
+
+    // XVII — THE STAR: 8-pointed star
+    star(ctx, cx, cy, s, t) {
+        const outer = 34 * s, inner = 14 * s;
+        const points = 8;
+        ctx.beginPath();
+        for (let i = 0; i < points * 2; i++) {
+            const a = (i / (points * 2)) * Math.PI * 2 - Math.PI / 2;
+            const r = i % 2 === 0 ? outer : inner;
+            const x = cx + Math.cos(a) * r;
+            const y = cy + Math.sin(a) * r;
+            i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+        }
+        ctx.closePath();
+        ctx.fill();
+    },
+
+    // XVIII — THE MOON: bold crescent
+    moon(ctx, cx, cy, s, t) {
+        const r = 30 * s;
+        ctx.beginPath();
+        ctx.arc(cx, cy, r, 0, Math.PI * 2);
+        ctx.fill();
+        // Cut out offset circle
+        ctx.save();
+        ctx.globalCompositeOperation = 'destination-out';
+        ctx.beginPath();
+        ctx.arc(cx + 16 * s, cy - 6 * s, r * 0.85, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+    },
+
+    // XIX — THE SUN: circle with bold rays
+    sun(ctx, cx, cy, s, t) {
+        // Rays
+        const rays = 12;
+        for (let i = 0; i < rays; i++) {
+            const a = (i / rays) * Math.PI * 2;
+            const inner = 18 * s, outer = 36 * s;
+            const spread = Math.PI / rays * 0.4;
+            ctx.beginPath();
+            ctx.moveTo(cx + Math.cos(a - spread) * inner, cy + Math.sin(a - spread) * inner);
+            ctx.lineTo(cx + Math.cos(a) * outer, cy + Math.sin(a) * outer);
+            ctx.lineTo(cx + Math.cos(a + spread) * inner, cy + Math.sin(a + spread) * inner);
+            ctx.closePath();
+            ctx.fill();
+        }
+        // Center circle
+        ctx.beginPath();
+        ctx.arc(cx, cy, 18 * s, 0, Math.PI * 2);
+        ctx.fill();
+    },
+
+    // XX — JUDGEMENT: trumpet / horn
+    judgement(ctx, cx, cy, s, t) {
+        // Bell of trumpet (widening to right)
+        ctx.beginPath();
+        ctx.moveTo(cx - 30 * s, cy - 4 * s);
+        ctx.lineTo(cx + 16 * s, cy - 22 * s);
+        ctx.quadraticCurveTo(cx + 38 * s, cy, cx + 16 * s, cy + 22 * s);
+        ctx.lineTo(cx - 30 * s, cy + 4 * s);
+        ctx.closePath();
+        ctx.fill();
+        // Mouthpiece
+        ctx.beginPath();
+        ctx.arc(cx - 32 * s, cy, 5 * s, 0, Math.PI * 2);
+        ctx.fill();
+    },
+
+    // XXI — THE WORLD: circle with a cross inside
+    world(ctx, cx, cy, s, t) {
+        const r = 32 * s;
+        ctx.lineWidth = 5 * s;
+        // Outer circle
+        ctx.beginPath();
+        ctx.arc(cx, cy, r, 0, Math.PI * 2);
+        ctx.stroke();
+        // Inner cross
+        ctx.lineWidth = 4 * s;
+        ctx.beginPath();
+        ctx.moveTo(cx, cy - r * 0.7);
+        ctx.lineTo(cx, cy + r * 0.7);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(cx - r * 0.7, cy);
+        ctx.lineTo(cx + r * 0.7, cy);
+        ctx.stroke();
+        // Center dot
+        ctx.beginPath();
+        ctx.arc(cx, cy, 5 * s, 0, Math.PI * 2);
+        ctx.fill();
+    },
+};
 
 function initCardCanvas(canvasId, voice) {
     const canvas = document.getElementById(canvasId);
@@ -533,36 +619,13 @@ function initCardCanvas(canvasId, voice) {
     const h = canvas.height = 148;
     const arc = getArcana(voice.arcana);
     const baseColor = hexToRgb(arc.color);
-
-    // Mood-shifted color based on relationship
     const { r, g, b } = getMoodColor(baseColor.r, baseColor.g, baseColor.b, voice.relationship || 'neutral');
 
     let frame = 0;
     let running = true;
 
-    // Deterministic seed from voice identity
-    const hash = hashString(voice.id + voice.name + (voice.arcana || ''));
-    const rng1 = seededRng(hash);
-    const rng2 = seededRng(hash * 7 + 13);
-    const rng3 = seededRng(hash * 31 + 97);
-
-    // Pick 2-3 shape layers (unique combination per voice)
-    const layerCount = 2 + (hash % 2);                         // 2 or 3 layers
-    const primaryIdx = hash % SHAPE_FAMILIES.length;
-    const secondaryIdx = (hash * 3 + 7) % SHAPE_FAMILIES.length;
-    const tertiaryIdx = (hash * 11 + 23) % SHAPE_FAMILIES.length;
-
-    // Ensure at least primary and secondary differ
-    const layers = [primaryIdx];
-    if (secondaryIdx !== primaryIdx) layers.push(secondaryIdx);
-    else layers.push((primaryIdx + 1) % SHAPE_FAMILIES.length);
-    if (layerCount > 2) {
-        if (tertiaryIdx !== layers[0] && tertiaryIdx !== layers[1]) layers.push(tertiaryIdx);
-        else layers.push((layers[1] + 2) % SHAPE_FAMILIES.length);
-    }
-
-    // Pre-generate RNG seeds for each layer (so art is stable across frames)
-    const layerRngs = layers.map((_, i) => seededRng(hash * (i + 1) * 17 + i * 53));
+    // Get the symbol drawer for this arcana (fallback to wheel)
+    const drawSymbol = ARCANA_SYMBOLS[voice.arcana] || ARCANA_SYMBOLS.wheel;
 
     function draw() {
         if (!running) return;
@@ -570,52 +633,61 @@ function initCardCanvas(canvasId, voice) {
 
         const st = voice.state;
         const intensity = st === 'agitated' ? 0.8 : st === 'active' ? 0.4 : st === 'dead' ? 0.05 : 0.15;
+        const time = frame * 0.015;
 
+        // Clear
         ctx.fillStyle = '#0a0612';
         ctx.fillRect(0, 0, w, h);
 
-        const cx = w / 2, cy = h / 2 - 5;
-        const time = frame * 0.02;
+        const cx = w / 2, cy = h / 2;
 
-        // Draw shape layers (each reseeds its own RNG per frame for stability)
-        for (let i = 0; i < layers.length; i++) {
-            const layerRng = seededRng(hash * (i + 1) * 17 + i * 53);
-            const alpha = i === 0 ? 1.0 : (i === 1 ? 0.7 : 0.4);
-            ctx.globalAlpha = alpha;
-            SHAPE_FAMILIES[layers[i]](ctx, cx, cy, r, g, b, intensity, time, layerRng);
-        }
-        ctx.globalAlpha = 1.0;
+        // Breathing scale
+        const breathe = 1.0 + Math.sin(time) * 0.03 * intensity;
 
-        // Center dot (always present)
-        ctx.fillStyle = `rgba(${r},${g},${b},${0.6 + intensity * 0.4})`;
-        ctx.beginPath();
-        ctx.arc(cx, cy, 2.5 + Math.sin(time * 2) * intensity * 2, 0, Math.PI * 2);
-        ctx.fill();
+        // Glow setup
+        ctx.save();
+        ctx.shadowColor = `rgba(${r},${g},${b},${0.4 + intensity * 0.4})`;
+        ctx.shadowBlur = 12 + intensity * 18;
+        ctx.shadowOffsetX = 0;
+        ctx.shadowOffsetY = 0;
 
-        // Scanlines
-        ctx.fillStyle = `rgba(0,0,0,${0.08 + intensity * 0.06})`;
+        // Symbol color
+        ctx.fillStyle = `rgba(${r},${g},${b},${0.6 + intensity * 0.35})`;
+        ctx.strokeStyle = `rgba(${r},${g},${b},${0.7 + intensity * 0.3})`;
+
+        // Scale from center
+        ctx.translate(cx, cy);
+        ctx.scale(breathe, breathe);
+        ctx.translate(-cx, -cy);
+
+        // Draw the arcana symbol
+        drawSymbol(ctx, cx, cy, 1.0, time);
+
+        ctx.restore();
+
+        // Scanlines (subtle)
+        ctx.fillStyle = `rgba(0,0,0,${0.06 + intensity * 0.04})`;
         for (let y = 0; y < h; y += 3) ctx.fillRect(0, y, w, 1);
 
-        // Glitch slices
-        if (st === 'agitated' || (st === 'active' && frame % 60 < 5)) {
-            const count = st === 'agitated' ? 3 + Math.floor(Math.random() * 4) : 1;
+        // Glitch slices (agitated only)
+        if (st === 'agitated' && frame % 3 === 0) {
+            const count = 2 + Math.floor(Math.random() * 3);
             for (let i = 0; i < count; i++) {
                 const sy = Math.random() * h;
-                const sh = 2 + Math.random() * 8;
-                const shift = (Math.random() - 0.5) * 12 * intensity;
+                const sh = 2 + Math.random() * 6;
+                const shift = (Math.random() - 0.5) * 10;
                 try {
                     const imgData = ctx.getImageData(0, sy, w, Math.min(sh, h - sy));
                     ctx.putImageData(imgData, shift, sy);
-                } catch (e) { /* ignore */ }
+                } catch (_) {}
             }
         }
 
-        // Static noise
-        const noiseAmt = st === 'agitated' ? 100 : st === 'active' ? 35 : 12;
+        // Sparse noise
+        const noiseAmt = st === 'agitated' ? 40 : st === 'active' ? 15 : 5;
         for (let i = 0; i < noiseAmt; i++) {
             const nx = Math.random() * w, ny = Math.random() * h;
-            const br = Math.random() * 100 + 50;
-            ctx.fillStyle = `rgba(${br},${br},${br + 30},${0.05 + intensity * 0.08})`;
+            ctx.fillStyle = `rgba(${r},${g},${b},${0.03 + intensity * 0.04})`;
             ctx.fillRect(nx, ny, 1, 1);
         }
 
