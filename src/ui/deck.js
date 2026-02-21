@@ -57,13 +57,20 @@ function buildTarotCard(voice) {
     const arc = getArcana(voice.arcana);
     const isDead = voice.state === 'dead';
     const hasDM = !isDead && voice.pendingDM !== null && voice.pendingDM !== undefined;
-    const borderStyle = voice.state === 'agitated'
-        ? `1px solid ${arc.glow}66` : `1px solid rgba(201,168,76,0.2)`;
-    const shadow = voice.state === 'agitated'
-        ? `0 0 20px ${arc.glow}44, inset 0 0 15px ${arc.glow}22`
-        : voice.state === 'active'
-            ? `0 0 10px ${arc.glow}22`
-            : `0 0 5px rgba(0,0,0,0.5)`;
+    const inf = voice.influence || 0;
+
+    // Border intensity scales with influence
+    const borderAlpha = isDead ? 0.1 : Math.max(0.15, inf / 150);
+    const glowIntensity = isDead ? 0 : Math.max(0, (inf - 20) / 100);
+    const glowSpread = Math.round(5 + glowIntensity * 20);
+    const glowAlpha = (glowIntensity * 0.5).toFixed(2);
+    const insetAlpha = (glowIntensity * 0.3).toFixed(2);
+
+    const borderStyle = `1px solid ${isDead ? 'rgba(85,85,85,0.15)' : arc.color + Math.round(borderAlpha * 255).toString(16).padStart(2, '0')}`;
+    const shadow = isDead
+        ? '0 0 5px rgba(0,0,0,0.5)'
+        : `0 0 ${glowSpread}px ${arc.glow.replace(/[\d.]+\)$/, glowAlpha + ')')}, inset 0 0 ${Math.round(glowSpread * 0.6)}px ${arc.glow.replace(/[\d.]+\)$/, insetAlpha + ')')}`;
+
     const pulse = voice.state === 'agitated'
         ? `<div class="chorus-tarot__pulse" style="border-color:${arc.glow}"></div>` : '';
     const dmBadge = hasDM

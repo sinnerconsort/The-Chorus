@@ -5,7 +5,7 @@
 
 import { renderExtensionTemplateAsync, getContext } from '../../../../../extensions.js';
 import { EXTENSION_NAME, LOG_PREFIX, TONE_ANCHORS } from '../config.js';
-import { extensionSettings, getContainer, panelOpen, setPanelOpen, saveSettings } from '../state.js';
+import { extensionSettings, getContainer, panelOpen, setPanelOpen, saveSettings, resetChatState } from '../state.js';
 import { renderDeck, cleanupCanvases } from './deck.js';
 import { initReadingTab, clearSidebar } from './reading.js';
 import { activateCouncil, deactivateCouncil } from '../social/council.js';
@@ -332,6 +332,23 @@ export async function initUI() {
             $(this).addClass('active');
             extensionSettings.narratorArchetype = $(this).data('value');
             saveSettings();
+        });
+
+        // ── Reset button (danger zone) ──
+        $('#chorus-btn-reset').on('click', function () {
+            // First click: arm it
+            if (!$(this).hasClass('chorus-btn-danger--armed')) {
+                $(this).addClass('chorus-btn-danger--armed').text('CONFIRM?');
+                setTimeout(() => {
+                    $(this).removeClass('chorus-btn-danger--armed').text('RESET');
+                }, 3000);
+                return;
+            }
+            // Second click: fire
+            resetChatState();
+            $(this).removeClass('chorus-btn-danger--armed').text('RESET');
+            renderDeck();
+            toastr.info('All voices silenced. Fresh start.', 'The Chorus');
         });
 
         // Render tabs
