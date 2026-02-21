@@ -747,7 +747,7 @@ export async function birthVoicesFromPersona() {
 
     try {
         const messages = buildPersonaExtractionPrompt(personaText, scenarioText, seedCount);
-        const responseText = await sendRequest(messages, 3000);
+        const responseText = await sendRequest(messages, 4500);
         const voices = parsePersonaExtractionResponse(responseText, seedCount);
 
         if (!voices || voices.length === 0) {
@@ -833,11 +833,11 @@ function buildPersonaExtractionPrompt(personaText, scenarioText, count) {
     return [
         {
             role: 'system',
-            content: `You are a psychological profiler extracting the internal voice fragments that already exist inside {{user}}'s psyche BEFORE the story begins.
+            content: `OUTPUT FORMAT: You MUST respond with ONLY a JSON array. Start your response with [ and end with ]. No thinking. No reasoning. No explanation. No markdown. No text before or after the JSON. ONLY the JSON array.
 
-CRITICAL: {{user}} is the PLAYER CHARACTER — the person described in the PERSONA CARD below. These voices live inside THEIR head. They are {{user}}'s intrusive thoughts, habits, fears, and drives. Do NOT create voices based on any other character in the scenario — other characters are external people {{user}} interacts with, not parts of {{user}}'s mind.
+You are extracting ${count} internal voice fragments from {{user}}'s psyche.
 
-These are not reactions to events — they are the pre-existing fractures that {{user}} carries into every room.
+{{user}} is the PLAYER CHARACTER described in the PERSONA CARD. These voices live inside THEIR head — intrusive thoughts, habits, fears, drives. Do NOT create voices based on other characters.
 
 CHAT TONE: ${toneDesc}
 
@@ -850,54 +850,45 @@ METAPHOR DOMAINS (each voice gets ONE, all different):
 ${METAPHOR_DOMAINS.join(', ')}
 
 VOICE DEPTHS — assign a mix:
-- "core" (1 max): Fundamental identity fragment. Can never truly resolve. Default influence 20, chattiness 1-2.
-- "rooted" (1-2): Deep psychological pattern. Hard to resolve. Default influence 30, chattiness 2-4.
-- "surface" (1-2): Reactive trait, might fade. Default influence 40, chattiness 3-5.
+- "core" (1 max): Fundamental identity. Can never resolve. Influence 20, chattiness 1-2.
+- "rooted" (1-2): Deep pattern. Hard to resolve. Influence 30, chattiness 2-4.
+- "surface" (1-2): Reactive trait, might fade. Influence 40, chattiness 3-5.
 
-CREATIVE CONSTRAINTS:
-- Names must NOT be "The [Emotion]" — push for unexpected, specific, even mundane. "The Accountant." "The Teeth." "Sweet Nothing." "The Flinch."
-- Each voice needs a verbal tic recognizable in two sentences
-- Each voice is WRONG about something specific — their blind spot
-- Each voice knows it's a fragment of {{user}}, not a whole person — how does it feel about that?
-- NO duplicates in metaphor domain, arcana, or personality type
-- These voices should feel like they've ALWAYS been inside {{user}} — not freshly generated
-- Base EVERYTHING on the persona card. If the scenario mentions other characters, those are people {{user}} knows — NOT sources for voices.
+NAMING: NOT "The [Emotion]" — use unexpected names. "The Accountant." "The Teeth." "Sweet Nothing."
+Each voice: unique verbal tic, specific blind spot, unique metaphor domain, unique arcana.
 
-Respond ONLY with a valid JSON array. No other text. No markdown fences.`,
+RESOLUTION RULES:
+- core → type "endure" (threshold: null, condition: "")
+- rooted → "heal", "transform", "confront", or "witness" (threshold 50-80)
+- surface → "fade", "heal", or "transform" (threshold 30-60)
+
+REMEMBER: Output ONLY the JSON array. The FIRST character of your response must be [`,
         },
         {
             role: 'user',
-            content: `{{user}}'s PERSONA CARD (this is who the voices belong to):
+            content: `{{user}}'s PERSONA CARD:
 ${personaText || '(No persona defined)'}
 
-NOTE ON FORMAT: The persona above may be in ANY format — plain text, W++ (personality=["trait"]), JSON, boostyle, SBF, or Ali:Chat. It might be a paragraph, a list of traits, or bracketed attributes. Read it regardless of format and extract the psychological content. Even short or sparse personas contain enough for voice fragments — a name and a few traits imply a whole person.
+FORMAT NOTE: The persona may be plain text, W++, JSON, boostyle, SBF, or Ali:Chat. Read it regardless of format.
 
-${scenarioText ? `SCENARIO (the situation {{user}} is entering — for context only, do NOT base voices on other characters mentioned here):\n${scenarioText}` : ''}
+${scenarioText ? `SCENARIO (context only — do NOT base voices on other characters):\n${scenarioText}` : ''}
 
-Extract ${count} pre-existing voice fragments from {{user}}'s psyche. What psychological pieces were already in place before the story started?
-
-For each voice, consider:
-- What trait or pattern would {{user}} carry from their background?
-- What fear, drive, or habit defines a piece of {{user}}?
-- What part of themselves does {{user}} not want to look at?
-- Even minimal personas have implications: a name implies a history, a trait implies its shadow, a role implies its cost.
-
-Return this exact JSON array:
+Return EXACTLY this JSON structure (${count} voices). START WITH [ — no other text:
 [
     {
         "name": "Voice Name",
         "arcana": "arcana_key",
         "reversed": false,
         "depth": "core|rooted|surface",
-        "birthMoment": "The specific aspect of the persona this voice was born from. 1-2 sentences.",
-        "personality": "2-3 sentence personality description rooted in the persona.",
-        "speakingStyle": "How they talk. Specific patterns.",
-        "obsession": "The specific thing this voice fixates on.",
-        "opinion": "This voice's take on the character. One provocative sentence.",
-        "blindSpot": "What this voice cannot see clearly.",
-        "selfAwareness": "How this voice feels about being only a fragment.",
-        "metaphorDomain": "one domain from the list",
-        "verbalTic": "A specific speech pattern with example.",
+        "birthMoment": "Aspect of persona this voice was born from. 1-2 sentences.",
+        "personality": "2-3 sentence personality description.",
+        "speakingStyle": "How they talk.",
+        "obsession": "What this voice fixates on.",
+        "opinion": "Voice's take on {{user}}. One sentence.",
+        "blindSpot": "What this voice cannot see.",
+        "selfAwareness": "How it feels about being a fragment.",
+        "metaphorDomain": "one domain",
+        "verbalTic": "Specific speech pattern with example.",
         "chattiness": 3,
         "influenceTriggers": {
             "raises": ["theme1", "theme2", "theme3"],
@@ -905,23 +896,20 @@ Return this exact JSON array:
         },
         "resolution": {
             "type": "fade|heal|transform|confront|witness|endure",
-            "condition": "What resolves this voice. Hidden from user.",
+            "condition": "What resolves this voice.",
             "threshold": 60,
             "transformsInto": null
         }
     }
-]
-
-DEPTH RULES for resolution:
-- core: MUST use "endure" (threshold: null, condition: empty). These never resolve.
-- rooted: Use heal, transform, confront, or witness. Threshold 50-80.
-- surface: Use fade, heal, or transform. Threshold 30-60.`,
+]`,
         },
     ];
 }
 
 /**
  * Parse the multi-voice extraction response.
+ * Handles: clean JSON, markdown-fenced JSON, reasoning + JSON,
+ * and TRUNCATED JSON (token limit hit mid-array).
  */
 function parsePersonaExtractionResponse(responseText, expectedCount) {
     if (!responseText) return null;
@@ -933,21 +921,48 @@ function parsePersonaExtractionResponse(responseText, expectedCount) {
         const fenceMatch = jsonStr.match(/```(?:json)?\s*([\s\S]*?)```/);
         if (fenceMatch) jsonStr = fenceMatch[1].trim();
 
-        // Find JSON array
-        const bracketMatch = jsonStr.match(/\[[\s\S]*\]/);
-        if (bracketMatch) jsonStr = bracketMatch[0];
+        // Find JSON array — try complete first
+        let bracketMatch = jsonStr.match(/\[[\s\S]*\]/);
+        if (bracketMatch) {
+            jsonStr = bracketMatch[0];
+        } else {
+            // No closing bracket — try to find start and recover
+            const startIdx = jsonStr.indexOf('[');
+            if (startIdx === -1) {
+                console.warn(`${LOG_PREFIX} No JSON array found in extraction response`);
+                return null;
+            }
+            jsonStr = jsonStr.substring(startIdx);
+            // Try to close truncated JSON
+            jsonStr = repairTruncatedJson(jsonStr);
+        }
 
-        const parsed = JSON.parse(jsonStr);
-        if (!Array.isArray(parsed)) return null;
+        let parsed;
+        try {
+            parsed = JSON.parse(jsonStr);
+        } catch (parseErr) {
+            // JSON still broken — try repair
+            console.warn(`${LOG_PREFIX} JSON parse failed, attempting repair...`);
+            jsonStr = repairTruncatedJson(jsonStr);
+            try {
+                parsed = JSON.parse(jsonStr);
+            } catch (repairErr) {
+                console.error(`${LOG_PREFIX} JSON repair also failed:`, repairErr.message);
+                // Last resort: extract individual objects
+                parsed = extractIndividualVoices(responseText);
+            }
+        }
+
+        if (!Array.isArray(parsed) || parsed.length === 0) return null;
 
         const results = [];
-        const usedArcana = new Set(getTakenArcana()); // Start with globally taken arcana
+        const usedArcana = new Set(getTakenArcana());
         const usedDomains = new Set();
 
         for (const raw of parsed) {
             if (!raw.name || !raw.personality) continue;
 
-            // Deduplicate arcana (both within batch and globally)
+            // Deduplicate arcana
             let arcana = raw.arcana;
             if (!ARCANA[arcana] || usedArcana.has(arcana)) {
                 arcana = Object.keys(ARCANA).find(k => !usedArcana.has(k)) || 'fool';
@@ -961,7 +976,6 @@ function parsePersonaExtractionResponse(responseText, expectedCount) {
             }
             usedDomains.add(domain);
 
-            // Determine depth
             const depth = ['surface', 'rooted', 'core'].includes(raw.depth) ? raw.depth : 'rooted';
 
             // Validate influence triggers
@@ -987,7 +1001,6 @@ function parsePersonaExtractionResponse(responseText, expectedCount) {
                 resolution.transformsInto = null;
             }
 
-            // Clamp chattiness
             const depthDef = VOICE_DEPTH[depth];
             const [minChat, maxChat] = depthDef?.chattinessRange || [1, 5];
             const chattiness = Math.max(minChat, Math.min(maxChat, raw.chattiness || 3));
@@ -1013,7 +1026,6 @@ function parsePersonaExtractionResponse(responseText, expectedCount) {
                     threshold: resolution.threshold ?? (resolution.type === 'endure' ? null : 60),
                     transformsInto: resolution.transformsInto || null,
                 },
-                // Temp fields for the caller (stripped by addVoice)
                 _depth: depth,
                 _birthMoment: raw.birthMoment || '',
             });
@@ -1021,12 +1033,88 @@ function parsePersonaExtractionResponse(responseText, expectedCount) {
             if (results.length >= expectedCount) break;
         }
 
+        console.log(`${LOG_PREFIX} Parsed ${results.length}/${expectedCount} voices from extraction`);
         return results;
 
     } catch (e) {
         console.error(`${LOG_PREFIX} Persona extraction parse failed:`, e);
         return null;
     }
+}
+
+/**
+ * Attempt to repair truncated JSON array.
+ * Handles cases where token limit cut the response mid-object or mid-array.
+ */
+function repairTruncatedJson(jsonStr) {
+    let s = jsonStr.trim();
+
+    // Count open/close braces and brackets
+    let braces = 0;
+    let brackets = 0;
+    let inString = false;
+    let escape = false;
+
+    for (let i = 0; i < s.length; i++) {
+        const c = s[i];
+        if (escape) { escape = false; continue; }
+        if (c === '\\') { escape = true; continue; }
+        if (c === '"') { inString = !inString; continue; }
+        if (inString) continue;
+        if (c === '{') braces++;
+        if (c === '}') braces--;
+        if (c === '[') brackets++;
+        if (c === ']') brackets--;
+    }
+
+    // If we're inside a string, close it
+    if (inString) s += '"';
+
+    // Find the last complete object by looking for the last '}' that closes a top-level object
+    // Strategy: find last '},', trim after it, close the array
+    const lastCompleteObj = s.lastIndexOf('},');
+    if (lastCompleteObj > 0) {
+        // Cut after last complete object, close the array
+        s = s.substring(0, lastCompleteObj + 1) + ']';
+        console.log(`${LOG_PREFIX} Repaired JSON: cut after last complete object`);
+        return s;
+    }
+
+    // Try finding last single '}' and close after it
+    const lastBrace = s.lastIndexOf('}');
+    if (lastBrace > 0) {
+        // Check if this closes a top-level object (bracket count should be 1 after this)
+        s = s.substring(0, lastBrace + 1) + ']';
+        console.log(`${LOG_PREFIX} Repaired JSON: closed after last brace`);
+        return s;
+    }
+
+    // Nothing salvageable
+    return s;
+}
+
+/**
+ * Last-resort: extract individual JSON objects from messy text.
+ * Finds each {...} block and tries to parse them individually.
+ */
+function extractIndividualVoices(text) {
+    const results = [];
+    const objRegex = /\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}/g;
+    let match;
+
+    while ((match = objRegex.exec(text)) !== null) {
+        try {
+            const obj = JSON.parse(match[0]);
+            if (obj.name && obj.personality) {
+                results.push(obj);
+            }
+        } catch (_) {
+            // Skip unparseable objects
+        }
+    }
+
+    console.log(`${LOG_PREFIX} Individual extraction found ${results.length} voice objects`);
+    return results.length > 0 ? results : null;
 }
 
 /**
