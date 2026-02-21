@@ -9,8 +9,11 @@
  *   - Silence pressure (builds over time)
  *   - Recency penalty (spoke recently = quieter)
  *   - Relationship modifier (manic = loud, indifferent = quiet)
+ *   - Wound sensitivity (avoidance/attraction to resolution themes)
+ *   - Depth impact floor (core voices only speak when it matters)
+ *   - Voice-to-voice dynamics (allies boost, enemies suppress)
  *
- * Cap at ~3 voices per message. At least 1 always speaks.
+ * Cap at configurable max speakers. At least 1 always speaks.
  */
 
 import { CHATTINESS_BASE, RELATIONSHIP_CHAT_MODIFIERS, LOG_PREFIX } from '../config.js';
@@ -24,15 +27,16 @@ import { getLivingVoices } from '../state.js';
  * Roll for which voices speak this message.
  * @param {string[]} themes - Themes from classifier for this message
  * @param {number} maxSpeakers - Maximum voices that can speak (default 3)
+ * @param {string} impact - Classifier impact level (none/minor/significant/critical)
  * @returns {Object[]} Array of voice objects that will speak, sorted by score
  */
-export function rollForParticipation(themes = [], maxSpeakers = 3) {
+export function rollForParticipation(themes = [], maxSpeakers = 3, impact = 'minor') {
     const living = getLivingVoices();
     if (living.length === 0) return [];
 
     const scored = living.map(voice => ({
         voice,
-        score: calculateParticipationScore(voice, themes),
+        score: calculateParticipationScore(voice, themes, impact, living),
     }));
 
     // Sort by score descending
@@ -63,8 +67,15 @@ export function rollForParticipation(themes = [], maxSpeakers = 3) {
  * Calculate participation score for a single voice.
  * Returns a float 0.0-1.0+ representing likelihood of speaking.
  */
-function calculateParticipationScore(voice, themes) {
+function calculateParticipationScore(voice, themes, impact, allVoices) {
     let score = 0;
+
+    // ── Depth-based impact floor ──
+    // Core voices only speak when something significant happens.
+    // They don't waste words on small talk.
+    if (voice.depth === 'core' && (impact === 'none' || impact === 'minor')) {
+        score -= 0.40; // Heavy penalty, but silence pressure can still override
+    }
 
     // Base from chattiness (1-5 trait)
     const chattiness = Math.max(1, Math.min(5, voice.chattiness || 3));
@@ -75,6 +86,9 @@ function calculateParticipationScore(voice, themes) {
 
     // Relevance bonus: theme matches
     score += calculateRelevanceBonus(voice, themes);
+
+    // ── Wound sensitivity: resolution topic avoidance/attraction ──
+    score += calculateWoundResponse(voice, themes);
 
     // Silence pressure: builds over time
     const silentStreak = voice.silentStreak || 0;
@@ -87,6 +101,10 @@ function calculateParticipationScore(voice, themes) {
     const relMod = RELATIONSHIP_CHAT_MODIFIERS[voice.relationship] || 0;
     score += relMod;
 
+    // ── Voice-to-voice dynamics ──
+    // If other voices have opinions about this voice, it affects participation
+    score += calculateSocialPressure(voice, allVoices);
+
     // Small random variance for variety
     score += (Math.random() - 0.5) * 0.10;
 
@@ -96,7 +114,6 @@ function calculateParticipationScore(voice, themes) {
 /**
  * Calculate relevance bonus from theme matching.
  * +0.30 per matching raise trigger
- * +0.15 if obsession loosely matches (always applied for now — AI handles specificity)
  */
 function calculateRelevanceBonus(voice, themes) {
     if (!themes || themes.length === 0) return 0;
@@ -113,6 +130,89 @@ function calculateRelevanceBonus(voice, themes) {
 
     // Cap relevance bonus
     return Math.min(0.60, bonus);
+}
+
+/**
+ * Wound sensitivity — how a voice reacts when resolution-adjacent themes appear.
+ *
+ * Not all voices WANT to engage with their healing themes.
+ * - Low resolution progress: AVOIDANT — the wound is too raw, they flinch away
+ * - Mid resolution progress: AGITATED — they can't ignore it anymore, it's stirring
+ * - High resolution progress: DRAWN — something is shifting, they sense the change
+ * - Endure types: always drawn, they can never let go of their territory
+ * - Fading voices near resolution: go quiet, let it pass
+ */
+function calculateWoundResponse(voice, themes) {
+    if (!themes || themes.length === 0) return 0;
+    if (!voice.resolution) return 0;
+
+    const lowers = voice.influenceTriggers?.lowers || [];
+    const resType = voice.resolution.type;
+    const progress = voice.resolution.progress || 0;
+    const threshold = voice.resolution.threshold;
+
+    // Check if any scene themes match the voice's LOWER triggers (healing themes)
+    const healingThemesPresent = themes.some(t => lowers.includes(t));
+    if (!healingThemesPresent) return 0;
+
+    // Endure voices: wound is permanent, they're always reactive to it
+    if (resType === 'endure') return 0.10;
+
+    // Fading voices near resolution: grow quiet — let the thought pass
+    if (resType === 'fade' && threshold && progress / threshold > 0.6) {
+        return -0.25;
+    }
+
+    // Calculate progress ratio (0 to 1)
+    const ratio = threshold ? progress / threshold : 0;
+
+    if (ratio < 0.3) {
+        // Low progress: AVOIDANT — not ready to face this
+        return -0.20;
+    } else if (ratio < 0.6) {
+        // Mid progress: AGITATED — it's stirring, can't ignore it
+        return 0.15;
+    } else {
+        // High progress: DRAWN — something is changing
+        return 0.25;
+    }
+}
+
+/**
+ * Social pressure from voice-to-voice opinions.
+ * Allies boost participation, enemies suppress it.
+ *
+ * If Voice A has opinion "allied" or "respects" about this voice,
+ * and Voice A spoke recently, this voice gets a small boost (encouraged).
+ * If Voice A has opinion "hostile" or "distrusts" about this voice,
+ * and Voice A spoke recently, this voice gets a penalty (suppressed).
+ */
+function calculateSocialPressure(voice, allVoices) {
+    let pressure = 0;
+
+    for (const other of allVoices) {
+        if (other.id === voice.id) continue;
+        if (!other.relationships) continue;
+
+        const opinion = other.relationships[voice.id];
+        if (!opinion) continue;
+
+        // Only matters if the other voice is active (spoke recently)
+        const otherActive = (other.silentStreak || 0) < 3;
+        if (!otherActive) continue;
+
+        const op = opinion.toLowerCase();
+        if (op.includes('allied') || op.includes('respect') || op.includes('agree') || op.includes('protect')) {
+            pressure += 0.08; // Allies encourage you to speak
+        } else if (op.includes('hostile') || op.includes('distrust') || op.includes('hate') || op.includes('suppress')) {
+            pressure -= 0.12; // Enemies try to shut you up
+        } else if (op.includes('mock') || op.includes('dismiss') || op.includes('annoy')) {
+            pressure -= 0.05; // Mild social friction
+        }
+    }
+
+    // Cap social pressure
+    return Math.max(-0.20, Math.min(0.15, pressure));
 }
 
 /**
