@@ -807,20 +807,10 @@ export function renderDeck() {
         });
     }
 
-    // Card flips (2D scaleX — stays in bounds)
+    // Card flips
     $spread.find('.chorus-tarot').on('click', function (e) {
         if ($(e.target).hasClass('chorus-tarot__btn')) return;
-        const $card = $(this);
-        if ($card.hasClass('flipping')) return; // mid-animation
-
-        // Phase 1: squeeze to scaleX(0)
-        $card.addClass('flipping');
-
-        // Phase 2: at midpoint, swap face visibility and expand back
-        $card.find('.chorus-tarot__inner').one('transitionend', function () {
-            $card.toggleClass('flipped');
-            $card.removeClass('flipping');
-        });
+        $(this).toggleClass('flipped');
     });
 
     // TALK buttons
