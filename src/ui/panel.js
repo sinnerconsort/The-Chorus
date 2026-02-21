@@ -279,11 +279,6 @@ export async function initUI() {
             extensionSettings.birthSensitivity = parseInt(this.value);
             saveSettings();
         });
-        $('#chorus-setting-draw-freq').on('input', function () {
-            $('#chorus-draw-freq-val').text(this.value);
-            extensionSettings.drawFrequency = parseInt(this.value);
-            saveSettings();
-        });
         $('#chorus-setting-reversal-chance').on('input', function () {
             $('#chorus-reversal-chance-val').text(this.value + '%');
             extensionSettings.reversalChance = parseInt(this.value);
@@ -331,6 +326,52 @@ export async function initUI() {
             $(this).siblings().removeClass('active');
             $(this).addClass('active');
             extensionSettings.narratorArchetype = $(this).data('value');
+            saveSettings();
+        });
+
+        // ── Spread severity picker ──
+        const $spreadSev = $('#chorus-setting-spread-severity');
+        $spreadSev.find('.chorus-picker__opt').removeClass('active');
+        $spreadSev.find(`[data-value="${extensionSettings.spreadSeverity || 'medium'}"]`).addClass('active');
+        $spreadSev.find('.chorus-picker__opt').on('click', function () {
+            $(this).siblings().removeClass('active');
+            $(this).addClass('active');
+            extensionSettings.spreadSeverity = $(this).data('value');
+            saveSettings();
+        });
+
+        // ── Full deck behavior picker ──
+        const $fullDeck = $('#chorus-setting-full-deck');
+        $fullDeck.find('.chorus-picker__opt').removeClass('active');
+        $fullDeck.find(`[data-value="${extensionSettings.fullDeckBehavior || 'block'}"]`).addClass('active');
+        $fullDeck.find('.chorus-picker__opt').on('click', function () {
+            $(this).siblings().removeClass('active');
+            $(this).addClass('active');
+            extensionSettings.fullDeckBehavior = $(this).data('value');
+            saveSettings();
+        });
+
+        // ── Council speed picker ──
+        const $councilSpeed = $('#chorus-setting-council-speed');
+        $councilSpeed.find('.chorus-picker__opt').removeClass('active');
+        $councilSpeed.find(`[data-value="${extensionSettings.councilSpeed || 'normal'}"]`).addClass('active');
+        $councilSpeed.find('.chorus-picker__opt').on('click', function () {
+            $(this).siblings().removeClass('active');
+            $(this).addClass('active');
+            extensionSettings.councilSpeed = $(this).data('value');
+            saveSettings();
+        });
+
+        // ── Council auto-continue toggle ──
+        const $councilAuto = $('#chorus-setting-council-auto');
+        if (extensionSettings.councilAutoContinue !== false) {
+            $councilAuto.addClass('on');
+        } else {
+            $councilAuto.removeClass('on');
+        }
+        $councilAuto.on('click', function () {
+            $(this).toggleClass('on');
+            extensionSettings.councilAutoContinue = $(this).hasClass('on');
             saveSettings();
         });
 
