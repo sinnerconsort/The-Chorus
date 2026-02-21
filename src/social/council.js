@@ -38,6 +38,7 @@ import {
     addCouncilMessages,
     clearCouncilHistory,
     updateVoiceRelationships,
+    updateVoice,
     adjustInfluence,
     saveChatState,
 } from '../state.js';
@@ -241,7 +242,13 @@ After all voice messages, on a NEW line, output voice-to-voice dynamics:
 [COUNCIL_DYNAMICS]
 voice_name → other_voice_name: brief_opinion_shift (e.g. "hostile — mocked their advice", "allied — backed them up", "dismissive — ignored them", "curious — intrigued by their point", "protective — defended them")
 
-Only include dynamics that actually changed this turn. If nothing shifted, write: [COUNCIL_DYNAMICS] none`,
+Only include dynamics that actually changed this turn. If nothing shifted, write: [COUNCIL_DYNAMICS] none
+
+After dynamics, if any voice had a genuine moment of self-awareness, breakthrough, or realization during this exchange (NOT forced — only if it genuinely happened):
+[COUNCIL_INSIGHTS]
+voice_name: brief description of what shifted (e.g. "acknowledged its blind spot for the first time", "admitted it might be wrong about trust", "realized it was projecting", "let go of something small")
+
+Only include insights that are REAL and EARNED. Most turns have none. Write: [COUNCIL_INSIGHTS] none if nothing meaningful shifted. False breakthroughs are worse than silence.`,
         },
         {
             role: 'user',
@@ -258,22 +265,33 @@ Only include dynamics that actually changed this turn. If nothing shifted, write
 }
 
 /**
- * Parse the AI response into structured messages + dynamics.
+ * Parse the AI response into structured messages + dynamics + insights.
  */
 function parseCouncilResponse(raw, voices) {
     const lines = raw.split('\n').map(l => l.trim()).filter(Boolean);
     const voiceMessages = [];
     let dynamicsRaw = '';
-    let inDynamics = false;
+    let insightsRaw = '';
+    let section = 'messages'; // messages | dynamics | insights
 
     for (const line of lines) {
         if (line.startsWith('[COUNCIL_DYNAMICS]')) {
-            inDynamics = true;
+            section = 'dynamics';
             dynamicsRaw = line.replace('[COUNCIL_DYNAMICS]', '').trim();
             continue;
         }
-        if (inDynamics) {
+        if (line.startsWith('[COUNCIL_INSIGHTS]')) {
+            section = 'insights';
+            insightsRaw = line.replace('[COUNCIL_INSIGHTS]', '').trim();
+            continue;
+        }
+
+        if (section === 'dynamics') {
             dynamicsRaw += ' ' + line;
+            continue;
+        }
+        if (section === 'insights') {
+            insightsRaw += ' ' + line;
             continue;
         }
 
@@ -304,7 +322,10 @@ function parseCouncilResponse(raw, voices) {
     // Parse dynamics
     const dynamics = parseDynamics(dynamicsRaw, voices);
 
-    return { messages: voiceMessages, dynamics };
+    // Parse insights
+    const insights = parseInsights(insightsRaw, voices);
+
+    return { messages: voiceMessages, dynamics, insights };
 }
 
 /**
@@ -347,12 +368,47 @@ function parseDynamics(raw, voices) {
     return updates;
 }
 
+/**
+ * Parse [COUNCIL_INSIGHTS] block into resolution progress events.
+ * Format: voice_name: description of what shifted
+ */
+function parseInsights(raw, voices) {
+    if (!raw || raw === 'none' || raw.trim() === '') return [];
+
+    const insights = [];
+    // Match "voice_name: insight description"
+    const segments = raw.split(/[;]|\n/).map(s => s.trim()).filter(Boolean);
+
+    for (const seg of segments) {
+        const match = seg.match(/(.+?):\s*(.+)/);
+        if (!match) continue;
+
+        const voiceName = match[1].trim();
+        const insight = match[2].trim();
+
+        const voice = voices.find(v =>
+            v.name.toLowerCase().includes(voiceName.toLowerCase()) ||
+            voiceName.toLowerCase().includes(v.name.toLowerCase().replace(/^the\s+/, ''))
+        );
+
+        if (voice && insight.length > 5) {
+            insights.push({
+                voiceId: voice.id,
+                name: voice.name,
+                insight: insight.substring(0, 120),
+            });
+        }
+    }
+
+    return insights;
+}
+
 // =============================================================================
 // COUNCIL TURN PROCESSING
 // =============================================================================
 
 /**
- * Process a council turn — generate, store, render, update relationships.
+ * Process a council turn — generate, store, render, update relationships + resolution.
  */
 async function processCouncilTurn(userMessage = null) {
     if (isGenerating || !isActive) return;
@@ -393,6 +449,29 @@ async function processCouncilTurn(userMessage = null) {
                 updateVoiceRelationships(d.fromId, { [d.toId]: d.opinion });
             }
             console.log(`${LOG_PREFIX} Council dynamics:`, result.dynamics.map(d => `${d.fromId} → ${d.toName}: ${d.opinion}`));
+        }
+
+        // Apply insights (resolution progress from council breakthroughs)
+        if (result.insights && result.insights.length > 0) {
+            for (const ins of result.insights) {
+                const voice = getVoiceById(ins.voiceId);
+                if (!voice || !voice.resolution) continue;
+
+                // Only heal, witness, confront, and transform can progress from council
+                const progressable = ['heal', 'witness', 'confront', 'transform'];
+                if (!progressable.includes(voice.resolution.type)) continue;
+
+                // Council insights give moderate progress (less than directory, more than passive)
+                const progress = 5 + Math.floor(Math.random() * 5); // 5-10 points
+                const oldProgress = voice.resolution.progress || 0;
+                const newProgress = Math.min(100, oldProgress + progress);
+
+                updateVoice(ins.voiceId, {
+                    resolution: { ...voice.resolution, progress: newProgress },
+                });
+
+                console.log(`${LOG_PREFIX} Council insight: ${voice.name} resolution ${oldProgress} → ${newProgress} ("${ins.insight}")`);
+            }
         }
 
         // Track turns
