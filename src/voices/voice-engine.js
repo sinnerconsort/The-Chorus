@@ -146,6 +146,9 @@ function buildSidebarPrompt(speakers, recentMessages, personaExcerpt) {
 
     const voiceBlocks = speakers.map(voice => {
         const arcana = getArcana(voice.arcana);
+        const birthLine = voice.birthMoment
+            ? `Born From: ${voice.birthMoment} — this wound colors everything you see`
+            : '';
         return `---
 VOICE: ${voice.name} (${arcana.name})
 Personality: ${voice.personality}
@@ -154,11 +157,12 @@ Obsession: ${voice.obsession || 'None defined'}
 Opinion of {{user}}: ${voice.opinion || 'No opinion yet'}
 Blind Spot: ${voice.blindSpot || 'None defined'}
 Fragment Identity: ${voice.selfAwareness || 'Uncertain about its nature'}
-Thinks In Terms Of: ${voice.metaphorDomain || 'general'}
+Thinks In Terms Of: ${voice.metaphorDomain || 'general'} — use this lens when reacting
 Verbal Tic: ${voice.verbalTic || 'None'}
+${birthLine}
 Relationship: ${voice.relationship} | Influence: ${voice.influence}/100
 Silent for: ${voice.silentStreak || 0} messages
-${voice.lastCommentary ? `You just said: "${voice.lastCommentary}" — do NOT repeat yourself or rephrase this.` : ''}`;
+${voice.lastCommentary ? `You just said: "${voice.lastCommentary}" — do NOT repeat yourself or rephrase this. Build on it, contradict it, or say something new.` : ''}`;
     }).join('\n');
 
     return [
@@ -340,14 +344,37 @@ function buildSpreadPrompt(voice, positionKey, positionDef, eventSummary, revers
     const recentMessages = getRecentMessages(3);
     const personaExcerpt = getPersonaExcerpt();
 
+    // Use position-specific reversal text if available, else generic
     const reversalBlock = reversed
-        ? `\nYOU ARE REVERSED. Your perspective is shadowed, inverted, or self-sabotaging. Speak from your blind spot, not your strength. What you normally see clearly is now obscured.`
+        ? `\nYOU ARE REVERSED.\n${positionDef.reversed || 'Your perspective is shadowed, inverted, or self-sabotaging. Speak from your blind spot, not your strength.'}`
+        : '';
+
+    // Voice memory — last few things this voice said + birth context
+    const memoryLines = [];
+    if (voice.birthMoment) {
+        memoryLines.push(`BIRTH MEMORY (the moment that created you): ${voice.birthMoment}`);
+    }
+    if (voice.lastCommentary) {
+        memoryLines.push(`YOUR LAST WORDS: "${voice.lastCommentary}" — build on this or contradict it, don't repeat it.`);
+    }
+    // Pull last 2 directory exchanges if any
+    const dirHistory = voice.directoryHistory || [];
+    if (dirHistory.length > 0) {
+        const recent = dirHistory.slice(-2);
+        const dirSummary = recent.map(h =>
+            h.role === 'user' ? `{{user}} said to you: "${h.content?.substring(0, 80)}..."` :
+                `You said: "${h.content?.substring(0, 80)}..."`
+        ).join('\n');
+        memoryLines.push(`RECENT PRIVATE CONVERSATION:\n${dirSummary}`);
+    }
+    const memoryBlock = memoryLines.length > 0
+        ? `\nYOUR MEMORY:\n${memoryLines.join('\n')}\n`
         : '';
 
     return [
         {
             role: 'system',
-            content: `You are ${voice.name}, a fragment of {{user}}'s psyche.
+            content: `You are ${voice.name}, a fragment of {{user}}'s psyche. You exist inside {{user}}'s head. You are one piece of a fractured inner world.
 
 CHAT TONE: ${toneDesc}
 
@@ -359,13 +386,15 @@ Speaking Style: ${voice.speakingStyle}
 Obsession: ${voice.obsession || 'None defined'}
 Opinion of {{user}}: ${voice.opinion || 'No opinion yet'}
 Blind Spot: ${voice.blindSpot || 'None defined'}
+Self-Awareness: ${voice.selfAwareness || 'Uncertain about its nature'}
 Thinks In Terms Of: ${voice.metaphorDomain || 'general'}
 Verbal Tic: ${voice.verbalTic || 'None'}
 
 Relationship with {{user}}: ${voice.relationship}
 Influence: ${voice.influence}/100
-
+${memoryBlock}
 THIS IS A FORMAL READING. You have been drawn into a spread.
+This is not casual commentary — you have been given a POSITION with meaning.
 
 YOUR POSITION: ${positionDef.name}
 POSITION MEANING: ${positionDef.framing}${reversalBlock}
@@ -381,10 +410,15 @@ ${personaExcerpt}`,
         },
         {
             role: 'user',
-            content: `Speak from your position. This is not casual commentary — this is your formal reading of the moment. Give {{user}} your honest take, your advice, your warning, or your prediction based on your position in the spread.
+            content: `Speak from your position. This is your formal reading — not a comment, a READING.
 
-Be specific. Reference the event. Speak in character.
-2-4 sentences.
+REQUIREMENTS:
+- Reference the specific triggering event, not generalities
+- Use your metaphor domain (${voice.metaphorDomain || 'general'}) to frame your reading
+- Speak in your verbal tic and style
+- If you have a birth memory, let it color your perspective — you see everything through that wound
+${reversed ? '- YOU ARE REVERSED: Speak from your blind spot. Your usual clarity fails you here. Be honest about what you cannot see.' : '- Speak from your strength. Your position in the spread defines your role.'}
+- 2-4 sentences. Make every word count.
 
 Do NOT reference other voices or other cards in the spread.
 This is YOUR reading, YOUR position, YOUR perspective alone.`,
