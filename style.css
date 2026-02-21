@@ -1332,6 +1332,121 @@
     filter: saturate(0.3) brightness(0.6);
 }
 
+/* ═══════════════════════════════════════════════════════════════
+   REVERSED CARD
+   Shadow aspect — inverted glyph, desaturated, diagonal slash
+   ═══════════════════════════════════════════════════════════════ */
+
+.chorus-tarot--reversed .chorus-tarot__front {
+    position: relative;
+}
+
+/* Subtle diagonal slash pattern overlay */
+.chorus-tarot--reversed .chorus-tarot__front::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 8px;
+    background: repeating-linear-gradient(
+        -45deg,
+        transparent,
+        transparent 12px,
+        rgba(140, 40, 40, 0.04) 12px,
+        rgba(140, 40, 40, 0.04) 13px
+    );
+    pointer-events: none;
+    z-index: 3;
+}
+
+/* Reversed glyph in art area — rotated */
+.chorus-tarot--reversed .chorus-tarot__art {
+    filter: hue-rotate(180deg) brightness(0.85);
+}
+
+/* Reversed mark indicator */
+.chorus-tarot__reversed-mark {
+    position: absolute;
+    top: 38px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-family: var(--chorus-font-mono);
+    font-size: 7px;
+    letter-spacing: 2px;
+    color: rgba(180, 80, 80, 0.7);
+    text-shadow: 0 0 6px rgba(180, 80, 80, 0.3);
+    z-index: 4;
+    white-space: nowrap;
+}
+
+/* Birth type badge (PATTERN / MERGED) */
+.chorus-tarot__birth-type {
+    position: absolute;
+    bottom: 62px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-family: var(--chorus-font-mono);
+    font-size: 6px;
+    letter-spacing: 2px;
+    color: rgba(201, 168, 76, 0.5);
+    background: rgba(13, 8, 22, 0.7);
+    padding: 1px 8px;
+    border-radius: 2px;
+    border: 1px solid rgba(201, 168, 76, 0.15);
+    z-index: 4;
+    white-space: nowrap;
+}
+
+/* Consume animation — card gets dragged and absorbed */
+@keyframes chorus-consume {
+    0% {
+        opacity: 1;
+        transform: scale(1);
+    }
+    30% {
+        opacity: 0.8;
+        transform: scale(0.95) rotate(-2deg);
+        filter: brightness(0.6) saturate(0.3);
+    }
+    60% {
+        opacity: 0.5;
+        transform: scale(0.7) rotate(-5deg);
+        filter: brightness(0.3) saturate(0);
+    }
+    100% {
+        opacity: 0;
+        transform: scale(0.2) rotate(-15deg);
+        filter: brightness(0) saturate(0);
+    }
+}
+
+.chorus-tarot--consuming {
+    animation: chorus-consume 1.2s ease-in forwards;
+    pointer-events: none;
+}
+
+/* Merge animation — two cards spiral inward */
+@keyframes chorus-merge-left {
+    0% { opacity: 1; transform: translateX(0) scale(1); }
+    50% { opacity: 0.7; transform: translateX(30px) scale(0.8) rotate(5deg); }
+    100% { opacity: 0; transform: translateX(50px) scale(0.3) rotate(15deg); }
+}
+
+@keyframes chorus-merge-right {
+    0% { opacity: 1; transform: translateX(0) scale(1); }
+    50% { opacity: 0.7; transform: translateX(-30px) scale(0.8) rotate(-5deg); }
+    100% { opacity: 0; transform: translateX(-50px) scale(0.3) rotate(-15deg); }
+}
+
+.chorus-tarot--merge-left {
+    animation: chorus-merge-left 1.2s ease-in forwards;
+    pointer-events: none;
+}
+
+.chorus-tarot--merge-right {
+    animation: chorus-merge-right 1.2s ease-in forwards;
+    pointer-events: none;
+}
+
 /* Empty slot */
 .chorus-tarot--empty {
     width: 170px;

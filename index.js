@@ -396,6 +396,37 @@ async function handleLifecycleEvents(events) {
                 break;
             }
 
+            case 'consumed': {
+                // Predator devours prey — animate prey being consumed
+                const prey = getVoiceById(event.preyId || event.voiceId);
+                if (prey) {
+                    const el = document.getElementById(`chorus-card-${prey.id}`);
+                    if (el) {
+                        el.classList.add('chorus-tarot--consuming');
+                        await new Promise(r => setTimeout(r, 1300));
+                    }
+                }
+                if (window.toastr) {
+                    toastr.warning(event.message || `${event.predatorName} devoured ${event.preyName}.`, 'Voice Consumed', { timeOut: 5000 });
+                }
+                refreshUI();
+                break;
+            }
+
+            case 'merged': {
+                // Two voices spiral inward and combine
+                const el1 = document.getElementById(`chorus-card-${event.voiceId}`);
+                const el2 = event.partnerId ? document.getElementById(`chorus-card-${event.partnerId}`) : null;
+                if (el1) el1.classList.add('chorus-tarot--merge-left');
+                if (el2) el2.classList.add('chorus-tarot--merge-right');
+                await new Promise(r => setTimeout(r, 1300));
+                if (window.toastr) {
+                    toastr.info(event.message || `${event.name} and ${event.partnerName} merged.`, 'Voices Merged', { timeOut: 5000 });
+                }
+                refreshUI();
+                break;
+            }
+
             case 'state_change':
                 // Subtle — no animation, no toastr. The user sees it in behavior.
                 console.log(`${LOG_PREFIX} ${event.name}: ${event.newState}`);
