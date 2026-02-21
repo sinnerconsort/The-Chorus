@@ -36,7 +36,7 @@ import {
     getVoicesWithPendingDMs,
 } from './src/state.js';
 import { initUI, destroyUI, refreshUI } from './src/ui/panel.js';
-import { processMessage, initializeFromPersona } from './src/voices/voice-engine.js';
+import { processMessage, initializeFromPersona, resetVoiceCounter } from './src/voices/voice-engine.js';
 import {
     renderSidebarCommentary,
     renderCardReading,
@@ -50,7 +50,7 @@ import {
     playTransformation,
     isAnimating,
 } from './src/ui/animations.js';
-import { initDirectory } from './src/social/directory.js';
+import { initDirectory, openDirectory } from './src/social/directory.js';
 import { checkOutreach, resetOutreachCooldown } from './src/social/outreach.js';
 import { initCouncil, resetCouncil } from './src/social/council.js';
 
@@ -62,6 +62,7 @@ async function addExtensionSettings() {
     const settingsHtml = await renderExtensionTemplateAsync(EXTENSION_NAME, 'settings');
     $('#extensions_settings2').append(settingsHtml);
 
+    // Enabled checkbox
     $('#chorus-enabled')
         .prop('checked', extensionSettings.enabled)
         .on('change', async function () {
@@ -74,6 +75,46 @@ async function addExtensionSettings() {
             } else if (!extensionSettings.enabled && wasEnabled) {
                 destroyUI();
             }
+        });
+
+    // Voice commentary frequency
+    $('#chorus-voice-frequency')
+        .val(extensionSettings.voiceFrequency || 1)
+        .on('change', function () {
+            extensionSettings.voiceFrequency = parseInt($(this).val(), 10);
+            saveSettings();
+        });
+
+    // Council auto-continue interval
+    $('#chorus-council-interval')
+        .val(extensionSettings.councilInterval || 10)
+        .on('change', function () {
+            extensionSettings.councilInterval = parseInt($(this).val(), 10);
+            saveSettings();
+        });
+
+    // Max voices
+    $('#chorus-max-voices')
+        .val(extensionSettings.maxVoices || 5)
+        .on('change', function () {
+            extensionSettings.maxVoices = parseInt($(this).val(), 10);
+            saveSettings();
+        });
+
+    // Card draw frequency
+    $('#chorus-draw-frequency')
+        .val(extensionSettings.drawFrequency || 3)
+        .on('change', function () {
+            extensionSettings.drawFrequency = parseInt($(this).val(), 10);
+            saveSettings();
+        });
+
+    // Narrator archetype
+    $('#chorus-narrator-archetype')
+        .val(extensionSettings.narratorArchetype || 'stage_manager')
+        .on('change', function () {
+            extensionSettings.narratorArchetype = $(this).val();
+            saveSettings();
         });
 }
 
@@ -92,6 +133,13 @@ function registerEvents() {
     $(document).on('chorus:directoryClose', () => {
         refreshUI();
         updateOutreachUI();
+    });
+
+    // Open directory from outreach toast click
+    $(document).on('chorus:openDirectory', (e, data) => {
+        if (data?.voiceId) {
+            openDirectory(data.voiceId);
+        }
     });
 
     console.log(`${LOG_PREFIX} Events registered`);
@@ -138,6 +186,9 @@ function onChatChanged() {
 
     // Reset council state for new chat
     resetCouncil();
+
+    // Reset voice commentary counter
+    resetVoiceCounter();
 
     // Re-render UI with loaded state
     if (extensionSettings.enabled) {

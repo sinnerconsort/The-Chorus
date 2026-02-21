@@ -1286,6 +1286,46 @@
     color: rgba(201, 168, 76, 0.13);
     letter-spacing: 2px;
 }
+
+/* Graveyard section */
+.chorus-graveyard {
+    width: 100%;
+    text-align: center;
+    padding: 12px 0 6px;
+    margin-top: 8px;
+    border-top: 1px solid rgba(68, 64, 58, 0.3);
+}
+
+.chorus-graveyard__label {
+    font-family: var(--chorus-font-heading);
+    font-size: 9px;
+    letter-spacing: 3px;
+    color: var(--chorus-text-dead);
+}
+
+.chorus-graveyard__subtitle {
+    font-family: var(--chorus-font-mono);
+    font-size: 7px;
+    letter-spacing: 2px;
+    color: rgba(68, 64, 58, 0.5);
+    margin-top: 2px;
+}
+
+.chorus-graveyard + .chorus-tarot {
+    opacity: 0.5;
+}
+
+.chorus-graveyard ~ .chorus-tarot {
+    opacity: 0.5;
+    filter: saturate(0.3);
+    transition: opacity 0.3s, filter 0.3s;
+}
+
+.chorus-graveyard ~ .chorus-tarot:hover {
+    opacity: 0.8;
+    filter: saturate(0.6);
+}
+
 .chorus-fan {
     position: relative;
     height: 155px;

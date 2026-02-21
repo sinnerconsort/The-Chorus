@@ -9,8 +9,78 @@
             <input type="checkbox" id="chorus-enabled">
             <span>Enable The Chorus</span>
         </label>
-        <div class="flex-container">
+        <div class="flex-container" style="margin-top:6px;">
             <small>Internal voices born from story extremes. Tarot compendium system.</small>
+        </div>
+
+        <hr style="border-color: rgba(201,168,76,0.1); margin: 10px 0;">
+
+        <!-- Voice Commentary Frequency -->
+        <div style="margin-bottom:8px;">
+            <label style="font-size:12px; color:#a89878;">
+                Voice Commentary
+                <select id="chorus-voice-frequency" style="margin-left:6px; font-size:11px;">
+                    <option value="1">Every message</option>
+                    <option value="2">Every 2 messages</option>
+                    <option value="3">Every 3 messages</option>
+                    <option value="5">Every 5 messages</option>
+                </select>
+            </label>
+        </div>
+
+        <!-- Council Auto-Continue Interval -->
+        <div style="margin-bottom:8px;">
+            <label style="font-size:12px; color:#a89878;">
+                Council Interval
+                <select id="chorus-council-interval" style="margin-left:6px; font-size:11px;">
+                    <option value="5">5 seconds</option>
+                    <option value="8">8 seconds</option>
+                    <option value="10">10 seconds (default)</option>
+                    <option value="15">15 seconds</option>
+                    <option value="20">20 seconds</option>
+                    <option value="30">30 seconds</option>
+                </select>
+            </label>
+        </div>
+
+        <!-- Max Voices -->
+        <div style="margin-bottom:8px;">
+            <label style="font-size:12px; color:#a89878;">
+                Max Voices
+                <select id="chorus-max-voices" style="margin-left:6px; font-size:11px;">
+                    <option value="3">3</option>
+                    <option value="4">4</option>
+                    <option value="5">5 (default)</option>
+                    <option value="7">7</option>
+                    <option value="10">10</option>
+                </select>
+            </label>
+        </div>
+
+        <!-- Card Draw Frequency -->
+        <div style="margin-bottom:8px;">
+            <label style="font-size:12px; color:#a89878;">
+                Card Draw Every
+                <select id="chorus-draw-frequency" style="margin-left:6px; font-size:11px;">
+                    <option value="1">1 message</option>
+                    <option value="2">2 messages</option>
+                    <option value="3">3 messages (default)</option>
+                    <option value="5">5 messages</option>
+                </select>
+            </label>
+        </div>
+
+        <!-- Narrator Archetype -->
+        <div style="margin-bottom:8px;">
+            <label style="font-size:12px; color:#a89878;">
+                Narrator Voice
+                <select id="chorus-narrator-archetype" style="margin-left:6px; font-size:11px;">
+                    <option value="stage_manager">Stage Manager</option>
+                    <option value="therapist">Therapist</option>
+                    <option value="framing">Framing Device</option>
+                    <option value="conscience">Conscience</option>
+                </select>
+            </label>
         </div>
     </div>
 </div>
