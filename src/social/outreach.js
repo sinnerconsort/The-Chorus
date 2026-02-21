@@ -182,6 +182,10 @@ export async function checkOutreach(themes = [], impact = 'none', summary = '') 
         if (success) {
             messagesSinceLastOutreach = 0;
             console.log(`${LOG_PREFIX} Outreach: ${top.voice.name} reaches out (score: ${top.score}, trigger: ${trigger})`);
+
+            // Show toast notification
+            showOutreachToast(top.voice);
+
             return { voiceId: top.voice.id, name: top.voice.name };
         }
     } catch (e) {
@@ -348,4 +352,72 @@ function buildTriggerContext(voice, themes, impact, summary) {
  */
 export function resetOutreachCooldown() {
     messagesSinceLastOutreach = OUTREACH_COOLDOWN; // Ready to fire immediately
+}
+
+// =============================================================================
+// TOAST NOTIFICATION
+// =============================================================================
+
+/**
+ * Show a visible toast when a voice reaches out.
+ * Auto-dismisses after 5s. Clicking opens directory.
+ */
+function showOutreachToast(voice) {
+    const arcana = getArcana(voice.arcana);
+    const glyph = arcana.glyph || '🂠';
+
+    // Remove any existing toast
+    $('.chorus-outreach-toast').remove();
+
+    const $toast = $(`
+        <div class="chorus-outreach-toast" data-voice-id="${voice.id}" style="
+            position: fixed;
+            bottom: 80px;
+            left: 50%;
+            transform: translateX(-50%) translateY(20px);
+            background: #0d0816;
+            border: 1px solid ${arcana.glow || 'rgba(201,168,76,0.3)'};
+            border-radius: 8px;
+            padding: 10px 16px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            z-index: 99999;
+            cursor: pointer;
+            opacity: 0;
+            transition: opacity 0.4s ease, transform 0.4s ease;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.6), 0 0 15px ${arcana.glow || 'rgba(201,168,76,0.15)'};
+            max-width: 280px;
+        ">
+            <span style="font-size: 18px;">${glyph}</span>
+            <div>
+                <div style="font-family: 'Cinzel', serif; font-size: 11px; letter-spacing: 1px; color: ${arcana.glow || '#c9a84c'};">
+                    ${voice.name.toUpperCase()}
+                </div>
+                <div style="font-family: 'Crimson Text', serif; font-size: 12px; color: #a89878; font-style: italic;">
+                    wants to talk
+                </div>
+            </div>
+            <span style="font-size: 10px; color: #55504a; margin-left: auto;">✦</span>
+        </div>
+    `);
+
+    $('body').append($toast);
+
+    // Animate in
+    requestAnimationFrame(() => {
+        $toast.css({ opacity: 1, transform: 'translateX(-50%) translateY(0)' });
+    });
+
+    // Click to open directory
+    $toast.on('click', () => {
+        $toast.remove();
+        $(document).trigger('chorus:openDirectory', { voiceId: voice.id });
+    });
+
+    // Auto-dismiss after 5 seconds
+    setTimeout(() => {
+        $toast.css({ opacity: 0, transform: 'translateX(-50%) translateY(20px)' });
+        setTimeout(() => $toast.remove(), 400);
+    }, 5000);
 }
