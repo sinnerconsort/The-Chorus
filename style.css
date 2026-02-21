@@ -1023,8 +1023,6 @@
     transition: opacity 1.5s, transform 1s;
     position: relative;
     z-index: 1;
-    overflow: hidden;
-    border-radius: 8px;
 }
 .chorus-tarot.flipped {
     z-index: 10;
