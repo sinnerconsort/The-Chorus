@@ -206,7 +206,7 @@ function initSigil(voice) {
 
         ctx.clearRect(0, 0, w, h);
 
-        const baseAlpha = 0.4;
+        const baseAlpha = 0.7;
 
         ctx.save();
         ctx.translate(cx, cy);
@@ -215,9 +215,9 @@ function initSigil(voice) {
         // Concentric rings
         for (let i = 0; i < rings; i++) {
             const radius = 20 + i * 16;
-            const alpha = baseAlpha * (1 - i * 0.2);
+            const alpha = baseAlpha * (1 - i * 0.15);
             ctx.strokeStyle = `rgba(${r},${g},${b},${alpha})`;
-            ctx.lineWidth = 0.8;
+            ctx.lineWidth = 1.2;
             ctx.beginPath();
             ctx.arc(0, 0, radius, 0, Math.PI * 2);
             ctx.stroke();
@@ -227,8 +227,8 @@ function initSigil(voice) {
         const outerR = 20 + (rings - 1) * 16;
         for (let i = 0; i < spokes; i++) {
             const a = (i / spokes) * Math.PI * 2;
-            ctx.strokeStyle = `rgba(${r},${g},${b},${baseAlpha * 0.5})`;
-            ctx.lineWidth = 0.5;
+            ctx.strokeStyle = `rgba(${r},${g},${b},${baseAlpha * 0.6})`;
+            ctx.lineWidth = 0.8;
             ctx.beginPath();
             ctx.moveTo(0, 0);
             ctx.lineTo(Math.cos(a) * outerR, Math.sin(a) * outerR);
@@ -239,8 +239,8 @@ function initSigil(voice) {
         ctx.save();
         ctx.rotate(-t * 0.3 * rotDir);
         const polyR = 18 + (seed % 8);
-        ctx.strokeStyle = `rgba(${r},${g},${b},${baseAlpha * 0.6})`;
-        ctx.lineWidth = 0.7;
+        ctx.strokeStyle = `rgba(${r},${g},${b},${baseAlpha * 0.8})`;
+        ctx.lineWidth = 1;
         ctx.beginPath();
         for (let i = 0; i <= innerPoly; i++) {
             const a = (i / innerPoly) * Math.PI * 2 - Math.PI / 2;
@@ -258,16 +258,16 @@ function initSigil(voice) {
             const orbitA = t * 0.5 * -rotDir;
             const ox = Math.cos(orbitA) * orbitR;
             const oy = Math.sin(orbitA) * orbitR;
-            ctx.fillStyle = `rgba(${r},${g},${b},${baseAlpha * 0.8})`;
+            ctx.fillStyle = `rgba(${r},${g},${b},${baseAlpha})`;
             ctx.beginPath();
-            ctx.arc(ox, oy, 2, 0, Math.PI * 2);
+            ctx.arc(ox, oy, 2.5, 0, Math.PI * 2);
             ctx.fill();
         }
 
         // Center dot
-        ctx.fillStyle = `rgba(${r},${g},${b},${baseAlpha * 0.5})`;
+        ctx.fillStyle = `rgba(${r},${g},${b},${baseAlpha * 0.7})`;
         ctx.beginPath();
-        ctx.arc(0, 0, 1.5, 0, Math.PI * 2);
+        ctx.arc(0, 0, 2, 0, Math.PI * 2);
         ctx.fill();
 
         ctx.restore();
