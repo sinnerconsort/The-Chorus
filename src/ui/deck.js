@@ -108,6 +108,7 @@ function buildTarotCard(voice) {
                 <div class="chorus-tarot__frame-outer"></div>
                 <div class="chorus-tarot__frame-inner"></div>
                 <div class="chorus-tarot__art">
+                    <canvas class="chorus-tarot__sigil" id="sigil-${voice.id}" width="146" height="148"></canvas>
                     <div class="chorus-tarot__glyph" style="color:${arc.glow}">${arc.glyph}</div>
                 </div>
                 <div class="chorus-tarot__arcana-label">${arc.label}</div>
@@ -166,8 +167,125 @@ function updateDeckStats(voices) {
     }
 }
 
-// No-op — canvas system removed, glyphs are CSS-only
-export function cleanupCanvases() {}
+// =============================================================================
+// SIGIL CANVAS — Atmospheric ritual circle behind each glyph
+// =============================================================================
+
+const activeSigils = [];
+
+function hashId(str) {
+    let h = 0;
+    for (let i = 0; i < str.length; i++) h = ((h << 5) - h + str.charCodeAt(i)) | 0;
+    return Math.abs(h);
+}
+
+function initSigil(voice) {
+    const canvas = document.getElementById(`sigil-${voice.id}`);
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const w = canvas.width, h = canvas.height;
+    const cx = w / 2, cy = h / 2;
+    const arc = getArcana(voice.arcana);
+    const { r, g, b } = hexToRgb(arc.color);
+
+    // Deterministic seed for this voice's pattern
+    const seed = hashId(voice.id + voice.name);
+    const rings = 2 + (seed % 3);           // 2-4 concentric rings
+    const spokes = 4 + (seed % 5) * 2;      // 4, 6, 8, 10, or 12
+    const innerPoly = 3 + (seed % 4);       // 3-6 sided inner polygon
+    const hasOrbit = (seed % 3) !== 0;       // 2/3 chance of orbiting dot
+    const rotDir = (seed % 2) ? 1 : -1;     // rotation direction
+
+    let frame = 0;
+    let running = true;
+
+    function draw() {
+        if (!running) return;
+        frame++;
+        const t = frame * 0.008;
+
+        ctx.clearRect(0, 0, w, h);
+
+        const baseAlpha = 0.4;
+
+        ctx.save();
+        ctx.translate(cx, cy);
+        ctx.rotate(t * 0.15 * rotDir);
+
+        // Concentric rings
+        for (let i = 0; i < rings; i++) {
+            const radius = 20 + i * 16;
+            const alpha = baseAlpha * (1 - i * 0.2);
+            ctx.strokeStyle = `rgba(${r},${g},${b},${alpha})`;
+            ctx.lineWidth = 0.8;
+            ctx.beginPath();
+            ctx.arc(0, 0, radius, 0, Math.PI * 2);
+            ctx.stroke();
+        }
+
+        // Spokes from center to outer ring
+        const outerR = 20 + (rings - 1) * 16;
+        for (let i = 0; i < spokes; i++) {
+            const a = (i / spokes) * Math.PI * 2;
+            ctx.strokeStyle = `rgba(${r},${g},${b},${baseAlpha * 0.5})`;
+            ctx.lineWidth = 0.5;
+            ctx.beginPath();
+            ctx.moveTo(0, 0);
+            ctx.lineTo(Math.cos(a) * outerR, Math.sin(a) * outerR);
+            ctx.stroke();
+        }
+
+        // Inner polygon (slowly counter-rotates)
+        ctx.save();
+        ctx.rotate(-t * 0.3 * rotDir);
+        const polyR = 18 + (seed % 8);
+        ctx.strokeStyle = `rgba(${r},${g},${b},${baseAlpha * 0.6})`;
+        ctx.lineWidth = 0.7;
+        ctx.beginPath();
+        for (let i = 0; i <= innerPoly; i++) {
+            const a = (i / innerPoly) * Math.PI * 2 - Math.PI / 2;
+            const x = Math.cos(a) * polyR;
+            const y = Math.sin(a) * polyR;
+            i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+        }
+        ctx.closePath();
+        ctx.stroke();
+        ctx.restore();
+
+        // Orbiting dot
+        if (hasOrbit) {
+            const orbitR = outerR - 8;
+            const orbitA = t * 0.5 * -rotDir;
+            const ox = Math.cos(orbitA) * orbitR;
+            const oy = Math.sin(orbitA) * orbitR;
+            ctx.fillStyle = `rgba(${r},${g},${b},${baseAlpha * 0.8})`;
+            ctx.beginPath();
+            ctx.arc(ox, oy, 2, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        // Center dot
+        ctx.fillStyle = `rgba(${r},${g},${b},${baseAlpha * 0.5})`;
+        ctx.beginPath();
+        ctx.arc(0, 0, 1.5, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.restore();
+
+        requestAnimationFrame(draw);
+    }
+    draw();
+
+    activeSigils.push({ stop: () => { running = false; } });
+}
+
+function cleanupSigils() {
+    activeSigils.forEach(s => s.stop());
+    activeSigils.length = 0;
+}
+
+// No-op kept for backward compat
+export function cleanupCanvases() { cleanupSigils(); }
 
 // =============================================================================
 // RENDER DECK (export)
@@ -175,6 +293,7 @@ export function cleanupCanvases() {}
 
 export function renderDeck() {
 
+    cleanupSigils();
     const voices = getVoices();
     const $spread = $('#chorus-card-spread');
     $spread.empty();
@@ -215,6 +334,9 @@ export function renderDeck() {
             $spread.append(buildTarotCard(voice));
         });
     }
+
+    // Init atmospheric sigil canvases
+    [...living, ...dead].forEach(voice => initSigil(voice));
 
     // Card flips
     $spread.find('.chorus-tarot').on('click', function (e) {
