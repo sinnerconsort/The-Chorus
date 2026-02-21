@@ -363,16 +363,17 @@ function renderCommentary(reading) {
         const text = slot.text || '\u2026';
         const reversedTag = slot.reversed
             ? `<div class="chorus-commentary__pip-rev">REVERSED</div>` : '';
+        const reversedClass = slot.reversed ? ' chorus-commentary--reversed' : '';
 
         $area.append(`
-            <div class="chorus-commentary">
+            <div class="chorus-commentary${reversedClass}">
                 <div class="chorus-commentary__pip">
-                    <div class="chorus-commentary__pip-glyph">${arc.glyph}</div>
+                    <div class="chorus-commentary__pip-glyph"${slot.reversed ? ' style="transform:rotate(180deg)"' : ''}>${arc.glyph}</div>
                     <div class="chorus-commentary__pip-pos">${slot.position.label}</div>
                     ${reversedTag}
                 </div>
                 <div class="chorus-commentary__body">
-                    <div class="chorus-commentary__name" style="color: ${arc.glow}">${slot.voice.name}</div>
+                    <div class="chorus-commentary__name" style="color: ${slot.reversed ? 'var(--chorus-reversal)' : arc.glow}">${slot.voice.name}</div>
                     <div class="chorus-commentary__context">${arc.label} \u00B7 ${(slot.voice.relationship || 'curious').toUpperCase()} \u00B7 INF ${slot.voice.influence || 0}</div>
                     <div class="chorus-commentary__text">${escapeHtml(text)}</div>
                 </div>
