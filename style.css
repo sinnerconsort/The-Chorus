@@ -1017,9 +1017,10 @@
 .chorus-tarot {
     width: 170px;
     height: 275px;
+    perspective: 800px;
     cursor: pointer;
     flex-shrink: 0;
-    transition: opacity 1.5s;
+    transition: opacity 1.5s, transform 1s;
     position: relative;
     z-index: 1;
 }
@@ -1029,18 +1030,24 @@
     filter: brightness(2) saturate(0);
 }
 
-/* Card inner — just a container, no transforms */
+/* Card inner (3D flip) */
 .chorus-tarot__inner {
     width: 100%;
     height: 100%;
     position: relative;
+    transform-style: preserve-3d;
+    transition: transform 0.7s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.chorus-tarot.flipped .chorus-tarot__inner {
+    transform: rotateY(180deg);
 }
 
-/* Card faces — stacked, crossfade via opacity */
+/* Card faces — stacked with backface hidden */
 .chorus-tarot__face {
     position: absolute;
     width: 100%;
     height: 100%;
+    backface-visibility: hidden;
     border-radius: 8px;
     overflow: hidden;
     background: #0d0816;
@@ -1048,11 +1055,9 @@
 }
 .chorus-tarot__front {
     z-index: 2;
-    opacity: 1;
 }
 .chorus-tarot__back {
-    z-index: 1;
-    opacity: 0;
+    transform: rotateY(180deg);
     overflow-y: auto;
     overflow-x: hidden;
     -webkit-overflow-scrolling: touch;
@@ -1338,11 +1343,7 @@
    art at bottom, text at top. Card stays right-side up.
    ═══════════════════════════════════════════════════════════════ */
 
-.chorus-tarot--reversed .chorus-tarot__front {
-    position: relative;
-}
-
-/* Subtle diagonal slash pattern overlay */
+/* Subtle diagonal slash pattern overlay for reversed */
 .chorus-tarot--reversed .chorus-tarot__front::after {
     content: '';
     position: absolute;
