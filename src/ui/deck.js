@@ -26,6 +26,7 @@ function buildInkBleed(voice, arc) {
     const { r, g, b } = hexToRgb(arc.color);
     const inf = voice.influence;
     const isDead = voice.state === 'dead';
+    const isReversed = !!voice.reversed;
 
     if (isDead) {
         return `<div class="chorus-tarot__ink" style="height:100%">
@@ -33,6 +34,25 @@ function buildInkBleed(voice, arc) {
         </div>`;
     }
 
+    // Reversed: ink bleeds DOWN from top. Normal: ink rises UP from bottom.
+    if (isReversed) {
+        const tendrils = [];
+        if (inf > 40) tendrils.push(`<div class="chorus-tarot__ink-tendril" style="bottom:-20px;left:20%;height:16px;background:linear-gradient(to bottom,rgba(${r},${g},${b},0.4),transparent)"></div>`);
+        if (inf > 60) tendrils.push(`<div class="chorus-tarot__ink-tendril" style="bottom:-18px;left:65%;width:3px;height:20px;background:linear-gradient(to bottom,rgba(${r},${g},${b},0.3),transparent)"></div>`);
+        if (inf > 75) tendrils.push(`<div class="chorus-tarot__ink-tendril" style="bottom:-26px;left:45%;height:24px;background:linear-gradient(to bottom,rgba(${r},${g},${b},0.5),transparent)"></div>`);
+
+        return `<div class="chorus-tarot__ink chorus-tarot__ink--reversed" style="height:${inf}%">
+            <div class="chorus-tarot__ink-body" style="background:linear-gradient(to bottom,rgba(${r},${g},${b},0.7) 0%,rgba(${r},${g},${b},0.4) 60%,rgba(${r},${g},${b},0.15) 100%)"></div>
+            <svg class="chorus-tarot__ink-wave chorus-tarot__ink-wave--reversed" viewBox="0 0 200 30" preserveAspectRatio="none">
+                <defs><filter id="ib-${voice.id}"><feGaussianBlur stdDeviation="3"/></filter></defs>
+                <path d="M0,0 Q25,${20 - Math.sin(inf * 0.1) * 8} 50,${12 - Math.cos(inf * 0.05) * 6} T100,${15 - Math.sin(inf * 0.08) * 5} T150,${10 - Math.cos(inf * 0.12) * 7} T200,0 L200,0 L0,0 Z" fill="rgba(${r},${g},${b},0.6)" filter="url(#ib-${voice.id})"/>
+                <path d="M0,0 Q30,${16 - Math.cos(inf * 0.07) * 5} 60,${10 - Math.sin(inf * 0.09) * 4} T120,${14 - Math.cos(inf * 0.06) * 6} T180,${8 - Math.sin(inf * 0.11) * 3} T200,0 L200,0 L0,0 Z" fill="rgba(${r},${g},${b},0.4)"/>
+            </svg>
+            ${tendrils.join('')}
+        </div>`;
+    }
+
+    // Normal: ink rises from bottom
     const tendrils = [];
     if (inf > 40) tendrils.push(`<div class="chorus-tarot__ink-tendril" style="top:-20px;left:20%;height:16px;background:linear-gradient(to top,rgba(${r},${g},${b},0.4),transparent)"></div>`);
     if (inf > 60) tendrils.push(`<div class="chorus-tarot__ink-tendril" style="top:-18px;left:65%;width:3px;height:20px;background:linear-gradient(to top,rgba(${r},${g},${b},0.3),transparent)"></div>`);
@@ -83,11 +103,6 @@ function buildTarotCard(voice) {
     const reversedIndicator = isReversed
         ? `<div class="chorus-tarot__reversed-mark">⟲ REVERSED</div>` : '';
 
-    // Arcana label — rotated 180deg for reversed
-    const arcanaLabelStyle = isReversed
-        ? 'transform:rotate(180deg);filter:hue-rotate(180deg) brightness(0.85)'
-        : '';
-
     // Birth type badge
     const birthTypeBadge = voice.birthType === 'accumulation'
         ? `<div class="chorus-tarot__birth-type">⧖ PATTERN</div>`
@@ -102,7 +117,7 @@ function buildTarotCard(voice) {
                 <div class="chorus-tarot__frame-outer"></div>
                 <div class="chorus-tarot__frame-inner"></div>
                 <div class="chorus-tarot__art"><canvas id="chorus-canvas-${voice.id}"></canvas></div>
-                <div class="chorus-tarot__arcana-label" style="${arcanaLabelStyle}">${arc.label}</div>
+                <div class="chorus-tarot__arcana-label">${arc.label}</div>
                 ${reversedIndicator}
                 <div class="chorus-tarot__name" style="text-shadow:0 0 10px ${arc.glow}44">${voice.name}</div>
                 <div class="chorus-tarot__state-badge">
@@ -282,7 +297,7 @@ export function renderDeck() {
     const dead = voices.filter(v => v.state === 'dead');
 
     // Sort living: agitated first, then active, then dormant
-    const stateOrder = { hijacking: 0, agitated: 1, active: 2, dormant: 3 };
+    const stateOrder = { agitated: 0, active: 1, dormant: 2 };
     living.sort((a, b) => (stateOrder[a.state] ?? 4) - (stateOrder[b.state] ?? 4));
 
     // Render living cards
