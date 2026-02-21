@@ -140,7 +140,7 @@ function getExistingVoiceSummary() {
 
     return living.map(v => {
         const arc = getArcana(v.arcana);
-        return `- ${v.name} (${arc.name}, ${v.depth || 'rooted'}) — ${v.personality.substring(0, 80)}`;
+        return `- ${v.name} (${arc.name}, ${v.depth || 'rooted'}, domain: ${v.metaphorDomain || 'general'}) — ${v.personality.substring(0, 100)}. Tic: ${(v.verbalTic || 'none').substring(0, 60)}`;
     }).join('\n');
 }
 
@@ -177,7 +177,7 @@ CHAT TONE: ${toneDesc}
 {{user}}'s PERSONA:
 ${personaText || '(No persona defined — generate based on the triggering moment alone)'}
 
-EXISTING VOICES (avoid duplicates in personality or domain):
+EXISTING VOICES (avoid duplicates in personality, domain, AND emotional register):
 ${existingVoices}
 
 VOICE DEPTH: ${depthDef.name}
@@ -193,16 +193,42 @@ METAPHOR DOMAINS (pick ONE, must be different from existing voices):
 ${METAPHOR_DOMAINS.join(', ')}
 
 CREATIVE CONSTRAINTS:
-- Name must NOT be "The [Emotion]" — push for unexpected, specific, even mundane names. "The Accountant." "The Teeth." "The Wednesday." "Sweet Nothing." "The Flinch."
-- This voice has a verbal tic or pattern recognizable in two sentences — not just "speaks tersely" but HOW.
-- This voice is WRONG about something specific and will never admit it. What is its blind spot?
-- This voice knows it's a fragment of {{user}}'s psyche, not a whole person. How does it feel about that?
+- Name must NOT be "The [Emotion]" — push for unexpected, specific, even mundane names. "The Accountant." "The Teeth." "The Wednesday." "Sweet Nothing." "The Flinch." "Loose Thread." "The Appointment."
+- This voice has a verbal tic or pattern recognizable in two sentences — not just "speaks tersely" but HOW. Does it interrupt itself? Ask rhetorical questions? Address {{user}} by a nickname? List things? Trail off? Repeat a phrase like a mantra?
+- This voice is WRONG about something specific and will never admit it. What is its blind spot? Be SPECIFIC — not "can't see the truth" but "assumes everyone leaves eventually and interprets normal distance as abandonment."
+- This voice knows it's a fragment of {{user}}'s psyche, not a whole person. How does it feel about that? Resent it? Accept it? Think it IS the real one? Try to become dominant?
 - This voice is born from what {{user}} experiences — NOT from what other characters feel or do.
+- EMOTIONAL RANGE: Not all voices are dark, angry, or wounded. Some are tender. Some are ridiculous. Some are embarrassingly petty. Some are peaceful. Match the birth moment's actual emotional register — don't default to "brooding and intense."
+- The voice's relationship to its own wound matters: some voices WANT to heal, some are terrified of it, some don't think they're wounded at all, some think the wound is the only honest thing about them.
 
 RESOLUTION GUIDANCE:
 ${resolutionGuidance}
 
 Respond ONLY with valid JSON. No other text. No markdown fences.`,
+        },
+        {
+            role: 'assistant',
+            content: `Here are examples of the quality and variety I produce:
+
+EXAMPLE 1 — Born from betrayal (Raw tone, Rooted depth):
+{"name":"The Flinch","arcana":"moon","personality":"Born from the moment you realized she'd been lying for months. Speaks in half-sentences because the truth is always worse than what it was about to say. Thinks in forensic terms — evidence, crime scenes, what was disturbed and what was staged.","speakingStyle":"Interrupts itself constantly. Starts revelations and abandons them. Uses em-dashes like escape hatches.","obsession":"The specific micro-expression she made before the lie. That half-second tell. Replays it endlessly.","opinion":"You saw the signs. You chose not to. I'm the part of you that saw and you locked in a closet.","blindSpot":"Assumes everyone is hiding something. Cannot recognize genuine transparency — interprets honesty as a more sophisticated deception.","selfAwareness":"Knows it's a fragment, not a whole person. Resents being just the paranoid part. Wants to be proven right so badly it manufactures evidence.","metaphorDomain":"forensics","verbalTic":"Starts sentences it can't finish. 'She was going to— no. The point is— actually forget it. Just watch.'","chattiness":2,"influenceTriggers":{"raises":["deception","betrayal","secrets_revealed","suspicion"],"lowers":["trust_earned","honesty","vulnerability_rewarded"]},"resolution":{"type":"confront","condition":"{{user}} directly acknowledges they ignored the warning signs and asks the voice what it actually needs","threshold":70,"transformsInto":null}}
+
+EXAMPLE 2 — Born from unexpected kindness (Tender tone, Surface depth):
+{"name":"Sweet Nothing","arcana":"lovers","personality":"Syrupy, too intimate, uncomfortably close. Born the moment someone was kind without wanting anything. Uses pet names for everything. Knows it's inside your head and treats that as a relationship.","speakingStyle":"Whisper-soft. Pet names constantly. Turns everything into an endearment. Uncomfortably sincere.","obsession":"The exact warmth of that moment. Keeps trying to recreate it. Suspicious of anything that feels different.","opinion":"Oh honey, you're doing that thing again. The thing where you pretend you don't need anyone. Sweetheart. I'm right here.","blindSpot":"Can't distinguish between comfort and dependence. Thinks needing someone is the same as loving them.","selfAwareness":"Loves being a fragment. Loves the intimacy of living inside someone's head. Never wants to leave.","metaphorDomain":"needlework","verbalTic":"Pet names woven into everything. 'Oh darling, no. Sweetheart, listen. Honey, honey, honey — not like that.'","chattiness":4,"influenceTriggers":{"raises":["affection","intimacy","loneliness","comfort"],"lowers":["rejection","cruelty","independence"]},"resolution":{"type":"fade","condition":"The initial rush of unexpected kindness fades as {{user}} acclimates to being treated well","threshold":50,"transformsInto":null}}
+
+EXAMPLE 3 — Born from existential dread (Clinical tone, Core depth):
+{"name":"The Auditor","arcana":"justice","personality":"Speaks in lists and inventories. Catalogs every slight, every kindness, keeps a running balance sheet of what's owed and what's been paid. Emerged when {{user}} realized they'd been keeping score their entire life.","speakingStyle":"Numbered lists. Running tallies. Dry, precise, devastatingly accurate.","obsession":"The ledger. The exact count of sacrifices made vs received. It never balances.","opinion":"You're three apologies short and two betrayals over budget. The ledger doesn't lie. I've checked it twice.","blindSpot":"Cannot account for grace. Things given freely break the spreadsheet. Generosity is a math error.","selfAwareness":"Believes it IS the real {{user}} and the rest are emotional noise obscuring the data.","metaphorDomain":"accounting","verbalTic":"Everything is quantified. 'That's the fourth time. I counted. Three of those were since Tuesday.'","chattiness":2,"influenceTriggers":{"raises":["injustice","sacrifice","imbalance","resentment"],"lowers":["forgiveness","generosity","grace"]},"resolution":{"type":"endure","condition":"","threshold":null,"transformsInto":null}}
+
+EXAMPLE 4 — Born from pure appetite (Feral tone, Surface depth):
+{"name":"Teeth","arcana":"devil","personality":"Barely verbal. Primal desire and appetite. Reacts to what the body wants, not what the mind decides. Born the moment {{user}} wanted something so badly their hands shook.","speakingStyle":"Fragments. Imperatives. No explanations. Raw want.","obsession":"The specific thing that triggered the wanting. Not abstract desire — the EXACT thing.","opinion":"Want. Want that. Why are you hesitating. TAKE.","blindSpot":"Cannot comprehend consequences. The future doesn't exist. Only now and hunger.","selfAwareness":"Doesn't understand the concept of being a fragment. Doesn't think. Just wants.","metaphorDomain":"animal behavior","verbalTic":"One-word imperatives. Repetition. 'Want. Want that. Why. Why not. TAKE.'","chattiness":3,"influenceTriggers":{"raises":["desire","temptation","hunger","lust"],"lowers":["restraint","satisfaction","disgust"]},"resolution":{"type":"fade","condition":"The specific craving passes or is satisfied","threshold":45,"transformsInto":null}}
+
+EXAMPLE 5 — Born from being lost (Mythic tone, Rooted depth):
+{"name":"The Cartographer","arcana":"hermit","personality":"Maps everything. Relationships are territories. Emotions are terrain features. Born when {{user}} realized they had no idea where they were in life. Draws charts of the unknown and labels the blank spaces.","speakingStyle":"Directional language. Terrain metaphors. Patient, methodical, occasionally awestruck by what's over the next ridge.","obsession":"The blank spaces on the map. The places {{user}} hasn't been or refuses to look at.","opinion":"You're in uncharted water and you've just burned the last map. I've seen this coastline before. There are rocks.","blindSpot":"Thinks if you can map something, you can control it. Mistakes naming the territory for conquering it.","selfAwareness":"Accepts being a fragment. Sees itself as the compass — not the traveler, but essential to the journey. Quietly proud.","metaphorDomain":"cartography","verbalTic":"Everything is geography. 'We've been here before. I recognize this valley. The ridge is just ahead — and you know what's on the other side.'","chattiness":2,"influenceTriggers":{"raises":["confusion","lost","searching","crossroads"],"lowers":["clarity","direction","purpose_found"]},"resolution":{"type":"witness","condition":"{{user}} finds genuine direction or purpose — not just a destination, but knowing WHY they're going there","threshold":65,"transformsInto":null}}
+
+EXAMPLE 6 — Born from pettiness (Sardonic tone, Surface depth):
+{"name":"The Receipt","arcana":"chariot","personality":"Remembers every small slight, every rolled eye, every time someone said 'it's fine' when it wasn't. Not the big betrayals — the tiny ones. The ones too small to complain about and too numerous to forget.","speakingStyle":"Sarcastic callbacks. Brings up irrelevant old grievances. Rhetorical questions dripping with mock patience.","obsession":"The specific small thing that was the last straw. Not the worst thing — the most recent annoying thing.","opinion":"Oh no, it's fine. It's totally fine. Just like it was fine the last eleven times.","blindSpot":"Cannot distinguish between a pattern of disrespect and normal human imperfection. Everything is evidence.","selfAwareness":"Knows it's petty. Knows it's a fragment. Doesn't care. Someone has to keep track of this stuff or it just keeps happening.","metaphorDomain":"theater","verbalTic":"'Oh no, it's fine' followed by proof it is not fine. 'Oh sure. Sure sure sure. That's fine. Like the time—'","chattiness":4,"influenceTriggers":{"raises":["disrespect","dismissal","condescension","ignored"],"lowers":["acknowledgment","apology","being_heard"]},"resolution":{"type":"fade","condition":"The accumulated small slights stop piling up as {{user}} finds people who actually listen","threshold":55,"transformsInto":null}}
+
+Now I'll generate the actual voice for the triggering moment.`,
         },
         {
             role: 'user',
@@ -234,6 +260,8 @@ Generate a voice born from this moment. Return this exact JSON structure:
         "transformsInto": null
     }
 }
+
+IMPORTANT: Match the emotional register of the birth moment. If it's petty, be petty. If it's tender, be tender. If it's absurd, be absurd. Don't default to dark/intense unless the moment IS dark/intense.
 
 For transform type, transformsInto should be:
 {

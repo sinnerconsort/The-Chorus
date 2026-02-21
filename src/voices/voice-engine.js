@@ -149,6 +149,33 @@ function buildSidebarPrompt(speakers, recentMessages, personaExcerpt) {
         const birthLine = voice.birthMoment
             ? `Born From: ${voice.birthMoment} — this wound colors everything you see`
             : '';
+
+        // Voice-to-voice opinions (only for other speakers in this batch)
+        const v2vLines = [];
+        for (const other of speakers) {
+            if (other.id === voice.id) continue;
+            // What this voice thinks of the other
+            const myOpinion = voice.relationships?.[other.id];
+            // What the other thinks of this voice
+            const theirOpinion = other.relationships?.[voice.id];
+            if (myOpinion) v2vLines.push(`You think of ${other.name}: ${myOpinion}`);
+            if (theirOpinion) v2vLines.push(`${other.name} thinks of you: ${theirOpinion}`);
+        }
+        const v2vBlock = v2vLines.length > 0
+            ? `Voice Dynamics:\n${v2vLines.join('\n')}` : '';
+
+        // Wound sensitivity hint (how close to resolution)
+        let woundHint = '';
+        if (voice.resolution && voice.resolution.type !== 'endure') {
+            const ratio = voice.resolution.threshold
+                ? voice.resolution.progress / voice.resolution.threshold : 0;
+            if (ratio > 0.6) {
+                woundHint = 'Something is shifting inside you. You can feel it. Your usual certainty is wavering.';
+            } else if (ratio > 0.3) {
+                woundHint = 'Your wound is stirring. You can feel it when certain topics come up. It makes you uneasy.';
+            }
+        }
+
         return `---
 VOICE: ${voice.name} (${arcana.name})
 Personality: ${voice.personality}
@@ -160,7 +187,9 @@ Fragment Identity: ${voice.selfAwareness || 'Uncertain about its nature'}
 Thinks In Terms Of: ${voice.metaphorDomain || 'general'} — use this lens when reacting
 Verbal Tic: ${voice.verbalTic || 'None'}
 ${birthLine}
-Relationship: ${voice.relationship} | Influence: ${voice.influence}/100
+Relationship with {{user}}: ${voice.relationship} | Influence: ${voice.influence}/100
+${v2vBlock}
+${woundHint}
 Silent for: ${voice.silentStreak || 0} messages
 ${voice.lastCommentary ? `You just said: "${voice.lastCommentary}" — do NOT repeat yourself or rephrase this. Build on it, contradict it, or say something new.` : ''}`;
     }).join('\n');
@@ -273,8 +302,9 @@ function finalizeLine(results, speakers, voiceName, text) {
  * Generate sidebar commentary for this message.
  * Returns array of { voiceId, name, arcana, text } for rendering.
  */
-export async function generateSidebarCommentary(themes = []) {
-    const speakers = rollForParticipation(themes, 3);
+export async function generateSidebarCommentary(themes = [], impact = 'minor') {
+    const maxSpeakers = extensionSettings.maxSpeakers || 3;
+    const speakers = rollForParticipation(themes, maxSpeakers, impact);
     if (speakers.length === 0) return [];
 
     const recentMessages = getRecentMessages(5);
@@ -509,6 +539,154 @@ export async function generateSpread(spreadType, themes = [], eventSummary = '')
 let lastBirthTime = 0;
 const BIRTH_COOLDOWN_MS = 30000; // 30 seconds between births
 
+// Track last spread advice for drift (module-level, not persisted)
+let lastSpreadAdvice = []; // [{ voiceId, raises[], lowers[] }]
+
+// Relationship drift map — same as directory.js
+const DRIFT_MAP = {
+    hostile:     { warmer: 'resentful',   colder: 'hostile' },
+    resentful:   { warmer: 'curious',     colder: 'hostile' },
+    indifferent: { warmer: 'curious',     colder: 'resentful' },
+    curious:     { warmer: 'warm',        colder: 'indifferent' },
+    warm:        { warmer: 'devoted',     colder: 'curious' },
+    devoted:     { warmer: 'protective',  colder: 'warm' },
+    protective:  { warmer: 'protective',  colder: 'devoted' },
+    obsessed:    { warmer: 'obsessed',    colder: 'devoted' },
+    manic:       { warmer: 'manic',       colder: 'obsessed' },
+    grieving:    { warmer: 'curious',     colder: 'indifferent' },
+};
+
+/**
+ * Nudge a voice's relationship one step warmer or colder.
+ * Returns true if the relationship actually changed.
+ */
+function nudgeRelationship(voice, direction) {
+    const current = voice.relationship || 'curious';
+    const options = DRIFT_MAP[current];
+    if (!options) return false;
+
+    const newRel = options[direction];
+    if (!newRel || newRel === current) return false;
+
+    updateVoice(voice.id, { relationship: newRel });
+    console.log(`${LOG_PREFIX} Passive drift: ${voice.name} ${current} → ${newRel} (${direction})`);
+    return true;
+}
+
+/**
+ * Apply passive relationship drift from main chat themes.
+ *
+ * Voices whose raise triggers keep matching → drift warmer (engaged, invested)
+ * Voices whose triggers NEVER match → drift toward indifferent (forgotten)
+ * Voices whose lower triggers match → complicated — depends on relationship.
+ *   A hostile voice seeing healing themes gets MORE hostile (resentful of the change).
+ *   A devoted voice seeing healing themes drifts warmer (pleased by growth).
+ *
+ * Very slow — 15% chance per message, max one drift per call.
+ */
+function applyPassiveRelationshipDrift(themes) {
+    if (!themes || themes.length === 0) return;
+
+    // Only fire 15% of the time — drift should be SLOW
+    if (Math.random() > 0.15) return;
+
+    const living = getLivingVoices();
+    let drifted = false;
+
+    for (const voice of living) {
+        if (drifted) break; // Max one drift per message
+
+        const raises = voice.influenceTriggers?.raises || [];
+        const lowers = voice.influenceTriggers?.lowers || [];
+        const raisesMatch = themes.some(t => raises.includes(t));
+        const lowersMatch = themes.some(t => lowers.includes(t));
+
+        if (raisesMatch) {
+            // Scene matches their wound → they're engaged → drift warmer
+            // EXCEPT: obsessed/manic voices get MORE obsessed, not warmer
+            const rel = voice.relationship;
+            if (rel === 'obsessed' || rel === 'manic') {
+                // Already maxed in their direction, no drift
+            } else {
+                drifted = nudgeRelationship(voice, 'warmer');
+            }
+        } else if (lowersMatch) {
+            // Scene matches their healing themes → complicated
+            const rel = voice.relationship;
+            if (rel === 'hostile' || rel === 'resentful') {
+                // Hostile voice sees healing → resents the progress → stays cold
+                // No drift (already cold)
+            } else if (rel === 'devoted' || rel === 'protective' || rel === 'warm') {
+                // Warm voice sees healing → pleased → drift warmer
+                drifted = nudgeRelationship(voice, 'warmer');
+            }
+            // Curious/indifferent: no drift from lowers
+        }
+
+        // Check for abandonment drift: voice hasn't been relevant in a while
+        if (!raisesMatch && !lowersMatch && (voice.silentStreak || 0) > 10) {
+            // Voice has been irrelevant for 10+ messages → drift toward indifferent
+            drifted = nudgeRelationship(voice, 'colder');
+        }
+    }
+}
+
+/**
+ * Apply drift from spread advice being followed or ignored.
+ * Called each message — checks if last spread's advice was "followed" or "defied"
+ * by comparing the voice's triggers to current themes.
+ *
+ * Note: This is approximate. We check if the scene moved toward what the voice
+ * wanted (raises matched) or away from it (lowers matched). Not perfect, but organic.
+ *
+ * IMPORTANT: Following advice makes the voice LIKE you more, but does NOT
+ * progress resolution. Affection ≠ healing. A devoted voice can still be wounded.
+ */
+function applyAdviceDrift(themes) {
+    if (!lastSpreadAdvice || lastSpreadAdvice.length === 0) return;
+    if (!themes || themes.length === 0) {
+        lastSpreadAdvice = []; // Clear, nothing to compare
+        return;
+    }
+
+    for (const advice of lastSpreadAdvice) {
+        const voice = getVoiceById(advice.voiceId);
+        if (!voice || voice.state === 'dead') continue;
+
+        const raisesMatch = themes.some(t => (advice.raises || []).includes(t));
+        const lowersMatch = themes.some(t => (advice.lowers || []).includes(t));
+
+        if (raisesMatch && !lowersMatch) {
+            // Scene aligned with voice's worldview → "they listened!"
+            // But this can be ironic: the voice might have BAD advice
+            // and be pleased the user is making the same mistake
+            nudgeRelationship(voice, 'warmer');
+        } else if (lowersMatch && !raisesMatch) {
+            // Scene went against voice's worldview → "they IGNORED me"
+            nudgeRelationship(voice, 'colder');
+        }
+    }
+
+    // Clear — only check once per spread
+    lastSpreadAdvice = [];
+}
+
+/**
+ * Store advice from a spread for drift tracking on next message.
+ */
+function recordSpreadAdvice(cardReading) {
+    if (!cardReading || !cardReading.cards) {
+        lastSpreadAdvice = [];
+        return;
+    }
+
+    lastSpreadAdvice = cardReading.cards.map(card => ({
+        voiceId: card.voiceId,
+        raises: getVoiceById(card.voiceId)?.influenceTriggers?.raises || [],
+        lowers: getVoiceById(card.voiceId)?.influenceTriggers?.lowers || [],
+    }));
+}
+
 /**
  * Main per-message processing pipeline.
  * Called from index.js onMessageReceived.
@@ -535,6 +713,12 @@ export async function processMessage(messageText) {
     for (const { voiceId, delta } of deltas) {
         adjustInfluence(voiceId, delta);
     }
+
+    // ─── Step 2b: Passive relationship drift from chat context ───
+    applyPassiveRelationshipDrift(themes);
+
+    // ─── Step 2c: Spread advice drift (did user follow/ignore last reading?) ───
+    applyAdviceDrift(themes);
 
     // ─── Step 3: Update escalation from impact ───
     updateEscalation(impact);
@@ -577,7 +761,7 @@ export async function processMessage(messageText) {
     voiceMessageCounter++;
     const voiceFreq = extensionSettings.voiceFrequency || 1;
     if (voiceMessageCounter >= voiceFreq) {
-        result.commentary = await generateSidebarCommentary(themes);
+        result.commentary = await generateSidebarCommentary(themes, impact);
         voiceMessageCounter = 0;
     }
 
@@ -588,6 +772,11 @@ export async function processMessage(messageText) {
 
     // ─── Step 8: Card pull / spread (conditional) ───
     result.cardReading = await handleCardDraw(impact, themes, summary);
+
+    // ─── Step 8b: Record spread advice for drift tracking on next message ───
+    if (result.cardReading) {
+        recordSpreadAdvice(result.cardReading);
+    }
 
     return result;
 }
