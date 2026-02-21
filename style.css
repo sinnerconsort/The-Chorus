@@ -37,7 +37,6 @@
     --chorus-state-dormant:  #667;
     --chorus-state-active:   #8c8;
     --chorus-state-agitated: #f66;
-    --chorus-state-hijack:   #f33;
     --chorus-state-dead:     #444;
 
     /* Danger / reversal */
@@ -2040,17 +2039,6 @@
     filter: hue-rotate(90deg);
 }
 
-/* Hijack — danger red */
-.chorus-log-entry--hijack .chorus-log-entry__icon,
-.chorus-log-entry--hijack .chorus-log-entry__label {
-    color: var(--chorus-danger);
-}
-.chorus-log-entry--hijack .chorus-log-entry__tier {
-    background: rgba(255, 34, 68, 0.1);
-    color: var(--chorus-danger);
-    border: 1px solid rgba(255, 34, 68, 0.2);
-}
-
 /* Empty state */
 .chorus-log-empty {
     display: flex;
@@ -2274,7 +2262,7 @@
 
 
 /* =============================================================================
-   LOG (Chronicle — birth/death/hijack history)
+   LOG (Chronicle — birth/death history)
    ============================================================================= */
 .chorus-log-entry {
     display: flex;
@@ -2340,11 +2328,6 @@
     border: 1px solid var(--chorus-danger-faint);
 }
 
-.chorus-log-tag--hijack {
-    background: rgba(160, 50, 50, 0.1);
-    color: rgba(255, 136, 136, 0.4);
-    border: 1px solid rgba(255, 68, 68, 0.13);
-}
 
 
 /* =============================================================================
@@ -2545,109 +2528,6 @@
     50% { box-shadow: 0 0 12px rgba(255, 34, 68, 0.5); }
 }
 
-
-/* =============================================================================
-   INTRUSION OVERLAY (Tier 1 hijack — future)
-   ============================================================================= */
-.chorus-intrusion {
-    display: none;
-    background: var(--chorus-bg-elevated);
-    border: 1px solid var(--chorus-danger-dim);
-    border-radius: 10px;
-    padding: 16px;
-}
-
-.chorus-intrusion.active {
-    display: block;
-    animation: chorus-slide-down 0.3s ease-out;
-}
-
-.chorus-intrusion__header {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin-bottom: 10px;
-}
-
-.chorus-intrusion__title {
-    font-family: var(--chorus-font-heading);
-    font-size: 11px;
-    letter-spacing: 1px;
-}
-
-.chorus-intrusion__tier {
-    font-family: var(--chorus-font-mono);
-    font-size: 8px;
-    letter-spacing: 1px;
-}
-
-.chorus-intrusion__msg {
-    padding: 10px;
-    border: 1px solid rgba(201, 168, 76, 0.06);
-    border-radius: 6px;
-    margin-bottom: 8px;
-    background: rgba(201, 168, 76, 0.02);
-}
-
-.chorus-intrusion__msg--voice {
-    border-color: var(--chorus-danger-faint);
-    background: rgba(255, 34, 68, 0.02);
-}
-
-.chorus-intrusion__msg-label {
-    font-family: var(--chorus-font-mono);
-    font-size: 8px;
-    color: var(--chorus-text-ghost);
-    margin-bottom: 4px;
-    letter-spacing: 1px;
-}
-
-.chorus-intrusion__msg-text {
-    font-size: 13px;
-    color: var(--chorus-text-secondary);
-    font-style: italic;
-}
-
-.chorus-intrusion__actions {
-    display: flex;
-    gap: 8px;
-    justify-content: center;
-    margin-top: 12px;
-}
-
-.chorus-intrusion__btn {
-    font-family: var(--chorus-font-mono);
-    font-size: 9px;
-    letter-spacing: 1px;
-    padding: 7px 16px;
-    border-radius: 4px;
-    cursor: pointer;
-    outline: none;
-    transition: all 0.2s;
-}
-
-.chorus-intrusion__btn--resist {
-    background: rgba(80, 120, 80, 0.3);
-    border: 1px solid rgba(140, 204, 140, 0.25);
-    color: var(--chorus-state-active);
-}
-
-.chorus-intrusion__btn--redirect {
-    background: rgba(100, 80, 30, 0.3);
-    border: 1px solid var(--chorus-gold-faint);
-    color: var(--chorus-gold);
-}
-
-.chorus-intrusion__btn--give-in {
-    background: rgba(160, 50, 50, 0.3);
-    border: 1px solid var(--chorus-danger-dim);
-    color: var(--chorus-state-agitated);
-}
-
-.chorus-intrusion__btn:active {
-    filter: brightness(1.3);
-    transform: scale(0.97);
-}
 
 
 /* =============================================================================
