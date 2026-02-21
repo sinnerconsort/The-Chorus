@@ -228,21 +228,24 @@
                     <div class="chorus-setting">
                         <div>
                             <div class="chorus-setting__label">MAX VOICES</div>
-                            <div class="chorus-setting__desc">Maximum cards in your deck</div>
+                            <div class="chorus-setting__desc">Maximum cards in your deck (22 = full Major Arcana)</div>
                         </div>
                         <div class="chorus-mini-slider">
-                            <input type="range" id="chorus-setting-max-voices" min="3" max="10" value="7">
+                            <input type="range" id="chorus-setting-max-voices" min="3" max="22" value="7">
                             <div class="chorus-mini-slider__val" id="chorus-max-voices-val">7</div>
                         </div>
                     </div>
 
                     <div class="chorus-setting">
                         <div>
-                            <div class="chorus-setting__label">AUTO EGO DEATH</div>
-                            <div class="chorus-setting__desc">Full deck forces sacrifice</div>
+                            <div class="chorus-setting__label">FULL DECK</div>
+                            <div class="chorus-setting__desc">What happens when deck is full and a new voice triggers</div>
                         </div>
-                        <div class="chorus-toggle on" id="chorus-setting-auto-ego-death">
-                            <div class="chorus-toggle__dot"></div>
+                        <div class="chorus-picker" id="chorus-setting-full-deck">
+                            <button class="chorus-picker__opt active" data-value="block">BLOCK</button>
+                            <button class="chorus-picker__opt" data-value="heal">HEAL</button>
+                            <button class="chorus-picker__opt" data-value="merge">MERGE</button>
+                            <button class="chorus-picker__opt" data-value="consume">CONSUME</button>
                         </div>
                     </div>
 
@@ -267,7 +270,7 @@
                     <div class="chorus-setting">
                         <div>
                             <div class="chorus-setting__label">DRAW MODE</div>
-                            <div class="chorus-setting__desc">When to draw cards automatically</div>
+                            <div class="chorus-setting__desc">Auto draws a single card every message</div>
                         </div>
                         <div class="chorus-picker" id="chorus-setting-draw-mode">
                             <button class="chorus-picker__opt active" data-value="auto">AUTO</button>
@@ -277,24 +280,13 @@
 
                     <div class="chorus-setting">
                         <div>
-                            <div class="chorus-setting__label">DRAW FREQUENCY</div>
-                            <div class="chorus-setting__desc">Messages between auto-draws</div>
+                            <div class="chorus-setting__label">SPREAD SEVERITY</div>
+                            <div class="chorus-setting__desc">How intense an event must be to trigger a multi-card spread</div>
                         </div>
-                        <div class="chorus-mini-slider">
-                            <input type="range" id="chorus-setting-draw-freq" min="1" max="10" value="3">
-                            <div class="chorus-mini-slider__val" id="chorus-draw-freq-val">3</div>
-                        </div>
-                    </div>
-
-                    <div class="chorus-setting">
-                        <div>
-                            <div class="chorus-setting__label">DEFAULT SPREAD</div>
-                            <div class="chorus-setting__desc">Spread type for auto-draws</div>
-                        </div>
-                        <div class="chorus-picker" id="chorus-setting-default-spread">
-                            <button class="chorus-picker__opt" data-value="single">1</button>
-                            <button class="chorus-picker__opt active" data-value="three">3</button>
-                            <button class="chorus-picker__opt" data-value="cross">5</button>
+                        <div class="chorus-picker" id="chorus-setting-spread-severity">
+                            <button class="chorus-picker__opt" data-value="low">LOW</button>
+                            <button class="chorus-picker__opt active" data-value="medium">MED</button>
+                            <button class="chorus-picker__opt" data-value="high">HIGH</button>
                         </div>
                     </div>
 
@@ -334,6 +326,35 @@
                         </div>
                         <div class="chorus-toggle" id="chorus-setting-decay">
                             <div class="chorus-toggle__dot"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Council -->
+            <div class="chorus-card">
+                <div class="chorus-settings-group">
+                    <div class="chorus-settings-group__title">COUNCIL</div>
+
+                    <div class="chorus-setting">
+                        <div>
+                            <div class="chorus-setting__label">AUTO-CONTINUE</div>
+                            <div class="chorus-setting__desc">Voices keep talking on their own</div>
+                        </div>
+                        <div class="chorus-toggle on" id="chorus-setting-council-auto">
+                            <div class="chorus-toggle__dot"></div>
+                        </div>
+                    </div>
+
+                    <div class="chorus-setting">
+                        <div>
+                            <div class="chorus-setting__label">SPEED</div>
+                            <div class="chorus-setting__desc">How fast voices talk to each other</div>
+                        </div>
+                        <div class="chorus-picker" id="chorus-setting-council-speed">
+                            <button class="chorus-picker__opt" data-value="fast">FAST</button>
+                            <button class="chorus-picker__opt active" data-value="normal">NORMAL</button>
+                            <button class="chorus-picker__opt" data-value="slow">SLOW</button>
                         </div>
                     </div>
                 </div>

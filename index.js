@@ -110,14 +110,6 @@ async function addExtensionSettings() {
             saveSettings();
         });
 
-    // Card draw frequency
-    $('#chorus-draw-frequency')
-        .val(extensionSettings.drawFrequency || 3)
-        .on('change', function () {
-            extensionSettings.drawFrequency = parseInt($(this).val(), 10);
-            saveSettings();
-        });
-
     // Narrator archetype
     $('#chorus-narrator-archetype')
         .val(extensionSettings.narratorArchetype || 'stage_manager')
