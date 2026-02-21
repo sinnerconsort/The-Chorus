@@ -810,9 +810,6 @@ export function renderDeck() {
     // Card flips
     $spread.find('.chorus-tarot').on('click', function (e) {
         if ($(e.target).hasClass('chorus-tarot__btn')) return;
-        // Reset all cards then raise clicked one above siblings
-        $spread.find('.chorus-tarot').css('z-index', '1');
-        $(this).css('z-index', '20');
         $(this).toggleClass('flipped');
     });
 
