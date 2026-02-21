@@ -26,6 +26,11 @@ const DEFAULT_CHAT_STATE = {
     narrator: {
         persona: '',
         active: true,
+        coherence: 100,            // 0-100, degrades as deck fills / voices gain power
+        voiceOpinions: {},         // { voiceId: 'opinion text' } — narrator's take on each voice
+        directoryHistory: [],      // 1-on-1 conversation log with the narrator
+        lastSpoke: null,           // Timestamp of last narration
+        silentStreak: 0,           // Messages since narrator last spoke
     },
 
     // Voice deck
@@ -492,7 +497,76 @@ export function getVoiceById(id) {
  */
 export function getNarrator() {
     if (!chatState) return DEFAULT_CHAT_STATE.narrator;
-    return chatState.narrator;
+    // Ensure all fields exist (migration from old state)
+    const n = chatState.narrator;
+    if (n.coherence === undefined) n.coherence = 100;
+    if (!n.voiceOpinions) n.voiceOpinions = {};
+    if (!n.directoryHistory) n.directoryHistory = [];
+    if (n.silentStreak === undefined) n.silentStreak = 0;
+    return n;
+}
+
+/**
+ * Update narrator state fields.
+ * @param {Object} updates - Partial narrator state to merge
+ */
+export function updateNarrator(updates) {
+    if (!chatState) return;
+    chatState.narrator = { ...chatState.narrator, ...updates };
+}
+
+/**
+ * Set narrator's opinion about a specific voice.
+ * @param {string} voiceId
+ * @param {string} opinion - AI-generated opinion text
+ */
+export function setNarratorOpinion(voiceId, opinion) {
+    if (!chatState) return;
+    if (!chatState.narrator.voiceOpinions) chatState.narrator.voiceOpinions = {};
+    chatState.narrator.voiceOpinions[voiceId] = opinion;
+}
+
+/**
+ * Get narrator's opinion about a specific voice.
+ * @param {string} voiceId
+ * @returns {string|null}
+ */
+export function getNarratorOpinion(voiceId) {
+    if (!chatState) return null;
+    return chatState.narrator.voiceOpinions?.[voiceId] || null;
+}
+
+/**
+ * Adjust narrator coherence.
+ * @param {number} delta - Amount to change (negative = degradation)
+ */
+export function adjustNarratorCoherence(delta) {
+    if (!chatState) return;
+    const n = chatState.narrator;
+    n.coherence = Math.max(0, Math.min(100, (n.coherence ?? 100) + delta));
+}
+
+/**
+ * Add messages to narrator directory history.
+ * @param {Object[]} messages - { role: 'user'|'narrator', text, timestamp }
+ */
+export function addNarratorDirectoryMessages(messages) {
+    if (!chatState) return;
+    if (!chatState.narrator.directoryHistory) chatState.narrator.directoryHistory = [];
+    chatState.narrator.directoryHistory.push(...messages);
+    // Cap at 50 messages
+    if (chatState.narrator.directoryHistory.length > 50) {
+        chatState.narrator.directoryHistory = chatState.narrator.directoryHistory.slice(-50);
+    }
+}
+
+/**
+ * Get narrator directory history.
+ * @returns {Object[]}
+ */
+export function getNarratorDirectoryHistory() {
+    if (!chatState) return [];
+    return chatState.narrator.directoryHistory || [];
 }
 
 /**
