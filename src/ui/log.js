@@ -1,8 +1,8 @@
 /**
  * THE CHORUS — Log Tab (Chronicle)
  *
- * Unified timeline of voice births, deaths, transformations,
- * and hijacks. Per-chat history rendered as a scrolling chronicle.
+ * Unified timeline of voice births, deaths, and transformations.
+ * Per-chat history rendered as a scrolling chronicle.
  *
  * Each entry is a "card" with arcana glyph, voice name, event
  * type, relative timestamp, and contextual details.
@@ -40,11 +40,6 @@ const EVENT_TYPES = {
         icon: '↻',
         cssClass: 'chorus-log-entry--transformed',
     },
-    hijack: {
-        label: 'SEIZED CONTROL',
-        icon: '⚡',
-        cssClass: 'chorus-log-entry--hijack',
-    },
 };
 
 // Resolution type → display label
@@ -66,7 +61,7 @@ const RESOLUTION_LABELS = {
  * Returns array of { type, timestamp, ...data }.
  */
 function buildTimeline() {
-    const { births, deaths, hijacks } = getLogs();
+    const { births, deaths } = getLogs();
     const entries = [];
 
     // Births
@@ -104,18 +99,6 @@ function buildTimeline() {
                 : type === 'resolved'
                     ? RESOLUTION_LABELS[d.resolutionType] || d.reason
                     : '',
-        });
-    }
-
-    // Hijacks
-    for (const h of hijacks) {
-        entries.push({
-            type: 'hijack',
-            timestamp: h.timestamp,
-            voiceId: h.voiceId,
-            name: h.name,
-            tier: h.tier,
-            detail: `Tier ${h.tier}`,
         });
     }
 
@@ -175,7 +158,6 @@ function buildLogEntry(entry) {
                 <div class="chorus-log-entry__name">${entry.name}</div>
                 <div class="chorus-log-entry__arcana">${arcanaName}</div>
                 ${entry.detail ? `<div class="chorus-log-entry__detail">${entry.detail}</div>` : ''}
-                ${entry.type === 'hijack' && entry.tier ? `<div class="chorus-log-entry__tier">TIER ${entry.tier}</div>` : ''}
             </div>
         </div>
     `;
@@ -203,7 +185,7 @@ export function renderLog() {
     }
 
     // Summary stats at top
-    const { births, deaths, hijacks } = getLogs();
+    const { births, deaths } = getLogs();
     const statsHtml = `
         <div class="chorus-log-stats">
             <div class="chorus-log-stat">
@@ -213,10 +195,6 @@ export function renderLog() {
             <div class="chorus-log-stat">
                 <span class="chorus-log-stat__val">${deaths.length}</span>
                 <span class="chorus-log-stat__label">silenced</span>
-            </div>
-            <div class="chorus-log-stat">
-                <span class="chorus-log-stat__val">${hijacks.length}</span>
-                <span class="chorus-log-stat__label">seizures</span>
             </div>
         </div>
     `;
