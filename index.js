@@ -86,6 +86,14 @@ async function addExtensionSettings() {
             saveSettings();
         });
 
+    // Max speakers per message
+    $('#chorus-max-speakers')
+        .val(extensionSettings.maxSpeakers || 3)
+        .on('change', function () {
+            extensionSettings.maxSpeakers = parseInt($(this).val(), 10);
+            saveSettings();
+        });
+
     // Council auto-continue interval
     $('#chorus-council-interval')
         .val(extensionSettings.councilInterval || 10)
