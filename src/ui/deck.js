@@ -807,10 +807,14 @@ export function renderDeck() {
         });
     }
 
-    // Card flips
+    // Card flips (opacity crossfade — no transforms, no layout shift)
     $spread.find('.chorus-tarot').on('click', function (e) {
         if ($(e.target).hasClass('chorus-tarot__btn')) return;
-        $(this).toggleClass('flipped');
+        const $card = $(this);
+        $card.toggleClass('flipped');
+        const flipped = $card.hasClass('flipped');
+        $card.find('.chorus-tarot__front').css('opacity', flipped ? '0' : '1');
+        $card.find('.chorus-tarot__back').css('opacity', flipped ? '1' : '0');
     });
 
     // TALK buttons
