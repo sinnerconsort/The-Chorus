@@ -624,8 +624,23 @@ function initCardCanvas(canvasId, voice) {
     let frame = 0;
     let running = true;
 
-    // Get the symbol drawer for this arcana (fallback to wheel)
     const drawSymbol = ARCANA_SYMBOLS[voice.arcana] || ARCANA_SYMBOLS.wheel;
+
+    // Pre-generate floating particles (deterministic per voice)
+    let seed = 0;
+    for (let i = 0; i < (voice.id || '').length; i++) seed = ((seed << 5) - seed + voice.id.charCodeAt(i)) | 0;
+    const particles = [];
+    for (let i = 0; i < 12; i++) {
+        seed = (seed * 1664525 + 1013904223) & 0xffffffff;
+        particles.push({
+            x: (seed >>> 0) % w,
+            speed: 0.15 + ((seed >>> 8) % 100) / 400,
+            drift: ((seed >>> 16) % 100 - 50) / 200,
+            size: 0.8 + ((seed >>> 4) % 100) / 80,
+            phase: ((seed >>> 12) % 628) / 100,
+            y: h,
+        });
+    }
 
     function draw() {
         if (!running) return;
@@ -641,35 +656,69 @@ function initCardCanvas(canvasId, voice) {
 
         const cx = w / 2, cy = h / 2;
 
-        // Breathing scale
-        const breathe = 1.0 + Math.sin(time) * 0.03 * intensity;
+        // --- Floating particles (rise slowly like embers) ---
+        if (st !== 'dead') {
+            const pAlpha = 0.15 + intensity * 0.25;
+            for (const p of particles) {
+                p.y -= p.speed * (1 + intensity);
+                p.x += Math.sin(time * 2 + p.phase) * p.drift;
+                if (p.y < -5) { p.y = h + 5; p.x = (p.x + 37) % w; }
 
-        // Glow setup
+                const fadeIn = Math.min(1, (h - p.y) / 30);
+                const fadeOut = Math.min(1, p.y / 30);
+                const alpha = pAlpha * fadeIn * fadeOut * (0.6 + Math.sin(time * 3 + p.phase) * 0.4);
+
+                ctx.fillStyle = `rgba(${r},${g},${b},${alpha})`;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        // --- Symbol with glow, drift, and breathing ---
+        const breathe = 1.0 + Math.sin(time * 0.8) * 0.04 * (1 + intensity);
+        // Lissajous drift
+        const driftX = Math.sin(time * 0.3) * 2 * intensity;
+        const driftY = Math.cos(time * 0.4) * 1.5 * intensity;
+        // Pulsing glow (varies more dramatically)
+        const glowPulse = 0.6 + Math.sin(time * 1.2) * 0.35;
+
         ctx.save();
-        ctx.shadowColor = `rgba(${r},${g},${b},${0.4 + intensity * 0.4})`;
-        ctx.shadowBlur = 12 + intensity * 18;
+
+        // Glow halo
+        ctx.shadowColor = `rgba(${r},${g},${b},${(0.3 + intensity * 0.5) * glowPulse})`;
+        ctx.shadowBlur = 14 + intensity * 22 + Math.sin(time * 1.5) * 6;
         ctx.shadowOffsetX = 0;
         ctx.shadowOffsetY = 0;
 
-        // Symbol color
-        ctx.fillStyle = `rgba(${r},${g},${b},${0.6 + intensity * 0.35})`;
-        ctx.strokeStyle = `rgba(${r},${g},${b},${0.7 + intensity * 0.3})`;
+        // Color with slight alpha pulse
+        const symAlpha = (0.55 + intensity * 0.35 + Math.sin(time * 1.2) * 0.08).toFixed(3);
+        ctx.fillStyle = `rgba(${r},${g},${b},${symAlpha})`;
+        ctx.strokeStyle = `rgba(${r},${g},${b},${(parseFloat(symAlpha) + 0.1).toFixed(3)})`;
 
-        // Scale from center
-        ctx.translate(cx, cy);
+        // Transform: drift + breathe
+        ctx.translate(cx + driftX, cy + driftY);
         ctx.scale(breathe, breathe);
-        ctx.translate(-cx, -cy);
+        ctx.translate(-(cx + driftX), -(cy + driftY));
 
-        // Draw the arcana symbol
-        drawSymbol(ctx, cx, cy, 1.0, time);
-
+        drawSymbol(ctx, cx + driftX, cy + driftY, 1.0, time);
         ctx.restore();
 
-        // Scanlines (subtle)
-        ctx.fillStyle = `rgba(0,0,0,${0.06 + intensity * 0.04})`;
+        // --- Ambient glow halo behind symbol (soft radial) ---
+        if (st !== 'dead') {
+            const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, 55 + intensity * 15);
+            grad.addColorStop(0, `rgba(${r},${g},${b},${(0.06 + intensity * 0.08) * glowPulse})`);
+            grad.addColorStop(0.5, `rgba(${r},${g},${b},${(0.02 + intensity * 0.03) * glowPulse})`);
+            grad.addColorStop(1, 'rgba(0,0,0,0)');
+            ctx.fillStyle = grad;
+            ctx.fillRect(0, 0, w, h);
+        }
+
+        // --- Scanlines ---
+        ctx.fillStyle = `rgba(0,0,0,${0.05 + intensity * 0.03})`;
         for (let y = 0; y < h; y += 3) ctx.fillRect(0, y, w, 1);
 
-        // Glitch slices (agitated only)
+        // --- Glitch slices (agitated) ---
         if (st === 'agitated' && frame % 3 === 0) {
             const count = 2 + Math.floor(Math.random() * 3);
             for (let i = 0; i < count; i++) {
@@ -681,14 +730,6 @@ function initCardCanvas(canvasId, voice) {
                     ctx.putImageData(imgData, shift, sy);
                 } catch (_) {}
             }
-        }
-
-        // Sparse noise
-        const noiseAmt = st === 'agitated' ? 40 : st === 'active' ? 15 : 5;
-        for (let i = 0; i < noiseAmt; i++) {
-            const nx = Math.random() * w, ny = Math.random() * h;
-            ctx.fillStyle = `rgba(${r},${g},${b},${0.03 + intensity * 0.04})`;
-            ctx.fillRect(nx, ny, 1, 1);
         }
 
         requestAnimationFrame(draw);
@@ -766,10 +807,20 @@ export function renderDeck() {
         });
     }
 
-    // Card flips
+    // Card flips (2D scaleX — stays in bounds)
     $spread.find('.chorus-tarot').on('click', function (e) {
         if ($(e.target).hasClass('chorus-tarot__btn')) return;
-        $(this).toggleClass('flipped');
+        const $card = $(this);
+        if ($card.hasClass('flipping')) return; // mid-animation
+
+        // Phase 1: squeeze to scaleX(0)
+        $card.addClass('flipping');
+
+        // Phase 2: at midpoint, swap face visibility and expand back
+        $card.find('.chorus-tarot__inner').one('transitionend', function () {
+            $card.toggleClass('flipped');
+            $card.removeClass('flipping');
+        });
     });
 
     // TALK buttons
