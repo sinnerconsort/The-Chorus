@@ -56,6 +56,7 @@ function buildInkBleed(voice, arc) {
 function buildTarotCard(voice) {
     const arc = getArcana(voice.arcana);
     const isDead = voice.state === 'dead';
+    const isReversed = !!voice.reversed;
     const hasDM = !isDead && voice.pendingDM !== null && voice.pendingDM !== undefined;
     const inf = voice.influence || 0;
 
@@ -76,15 +77,33 @@ function buildTarotCard(voice) {
     const dmBadge = hasDM
         ? `<div class="chorus-tarot__dm-badge" style="background:${arc.glow};box-shadow:0 0 8px ${arc.glow}">✦</div>` : '';
     const deadClass = isDead ? ' chorus-tarot--dead' : '';
+    const reversedClass = isReversed ? ' chorus-tarot--reversed' : '';
 
-    return `<div class="chorus-tarot${deadClass}" id="chorus-card-${voice.id}" data-voice-id="${voice.id}">
+    // Reversed label treatment
+    const reversedIndicator = isReversed
+        ? `<div class="chorus-tarot__reversed-mark">⟲ REVERSED</div>` : '';
+
+    // Arcana label — rotated 180deg for reversed
+    const arcanaLabelStyle = isReversed
+        ? 'transform:rotate(180deg);filter:hue-rotate(180deg) brightness(0.85)'
+        : '';
+
+    // Birth type badge
+    const birthTypeBadge = voice.birthType === 'accumulation'
+        ? `<div class="chorus-tarot__birth-type">⧖ PATTERN</div>`
+        : voice.birthType === 'merge'
+            ? `<div class="chorus-tarot__birth-type">⧉ MERGED</div>`
+            : '';
+
+    return `<div class="chorus-tarot${deadClass}${reversedClass}" id="chorus-card-${voice.id}" data-voice-id="${voice.id}">
         <div class="chorus-tarot__inner">
             <!-- FRONT -->
             <div class="chorus-tarot__face chorus-tarot__front" style="border:${borderStyle};box-shadow:${shadow}">
                 <div class="chorus-tarot__frame-outer"></div>
                 <div class="chorus-tarot__frame-inner"></div>
                 <div class="chorus-tarot__art"><canvas id="chorus-canvas-${voice.id}"></canvas></div>
-                <div class="chorus-tarot__arcana-label">${arc.label}</div>
+                <div class="chorus-tarot__arcana-label" style="${arcanaLabelStyle}">${arc.label}</div>
+                ${reversedIndicator}
                 <div class="chorus-tarot__name" style="text-shadow:0 0 10px ${arc.glow}44">${voice.name}</div>
                 <div class="chorus-tarot__state-badge">
                     <span class="chorus-tarot__badge chorus-tarot__badge--${voice.state || 'active'}">${(voice.state || 'active').toUpperCase()}</span>
@@ -94,12 +113,13 @@ function buildTarotCard(voice) {
                 <div class="chorus-tarot__scanlines"></div>
                 ${pulse}
                 ${dmBadge}
+                ${birthTypeBadge}
             </div>
             <!-- BACK -->
             <div class="chorus-tarot__face chorus-tarot__back" style="border:1px solid rgba(201,168,76,0.2);box-shadow:${shadow}">
                 <div class="chorus-tarot__back-content">
-                    <div class="chorus-tarot__back-name">${voice.name}</div>
-                    <div class="chorus-tarot__back-arcana">${arc.label}</div>
+                    <div class="chorus-tarot__back-name">${voice.name}${isReversed ? ' ⟲' : ''}</div>
+                    <div class="chorus-tarot__back-arcana">${arc.label}${isReversed ? ' (REVERSED)' : ''}</div>
                     <div class="chorus-tarot__back-divider"></div>
                     <div class="chorus-tarot__back-personality">${voice.personality}</div>
                     <div class="chorus-tarot__back-divider"></div>
