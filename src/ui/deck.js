@@ -196,6 +196,10 @@ function initSigil(voice) {
     const hasOrbit = (seed % 3) !== 0;       // 2/3 chance of orbiting dot
     const rotDir = (seed % 2) ? 1 : -1;     // rotation direction
 
+    // Fixed outer radius — always fills the canvas consistently
+    const outerR = 58;
+    const innerR = 16;
+
     let frame = 0;
     let running = true;
 
@@ -212,10 +216,11 @@ function initSigil(voice) {
         ctx.translate(cx, cy);
         ctx.rotate(t * 0.15 * rotDir);
 
-        // Concentric rings
+        // Concentric rings — evenly distributed from inner to outer
         for (let i = 0; i < rings; i++) {
-            const radius = 20 + i * 16;
-            const alpha = baseAlpha * (1 - i * 0.15);
+            const frac = rings === 1 ? 1 : i / (rings - 1);
+            const radius = innerR + frac * (outerR - innerR);
+            const alpha = baseAlpha * (1 - i * 0.12);
             ctx.strokeStyle = `rgba(${r},${g},${b},${alpha})`;
             ctx.lineWidth = 1.2;
             ctx.beginPath();
@@ -224,7 +229,6 @@ function initSigil(voice) {
         }
 
         // Spokes from center to outer ring
-        const outerR = 20 + (rings - 1) * 16;
         for (let i = 0; i < spokes; i++) {
             const a = (i / spokes) * Math.PI * 2;
             ctx.strokeStyle = `rgba(${r},${g},${b},${baseAlpha * 0.6})`;
@@ -238,7 +242,7 @@ function initSigil(voice) {
         // Inner polygon (slowly counter-rotates)
         ctx.save();
         ctx.rotate(-t * 0.3 * rotDir);
-        const polyR = 18 + (seed % 8);
+        const polyR = innerR + (outerR - innerR) * 0.4 + (seed % 6);
         ctx.strokeStyle = `rgba(${r},${g},${b},${baseAlpha * 0.8})`;
         ctx.lineWidth = 1;
         ctx.beginPath();
@@ -254,7 +258,7 @@ function initSigil(voice) {
 
         // Orbiting dot
         if (hasOrbit) {
-            const orbitR = outerR - 8;
+            const orbitR = outerR - 6;
             const orbitA = t * 0.5 * -rotDir;
             const ox = Math.cos(orbitA) * orbitR;
             const oy = Math.sin(orbitA) * orbitR;
