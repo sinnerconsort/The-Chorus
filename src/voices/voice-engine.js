@@ -39,6 +39,9 @@ import { birthVoiceFromEvent, birthVoicesFromPersona } from './voice-birth.js';
 import { processLifecycle, completeTransformation } from './voice-lifecycle.js';
 import { tryAmbientNarration, narrateBirth, narrateDeath } from './narrator.js';
 
+// Voice commentary frequency counter (resets each time commentary fires)
+let voiceMessageCounter = 0;
+
 // =============================================================================
 // PROFILE RESOLUTION (shared with classifier)
 // =============================================================================
@@ -161,7 +164,15 @@ ${voice.lastCommentary ? `You just said: "${voice.lastCommentary}" — do NOT re
     return [
         {
             role: 'system',
-            content: `You are generating the internal voices of {{user}}'s psyche. These voices are fragments — born from extreme moments, carrying their weight ever since. They exist inside {{user}}'s head, inside the fiction. They are intrusive thoughts with names and grudges.
+            content: `You are generating the internal voices of {{user}}'s psyche. These voices live INSIDE {{user}}'s head. They are {{user}}'s own thoughts, fears, impulses, and reactions — NOT the thoughts of any other character.
+
+CRITICAL PERSPECTIVE RULE:
+- These voices react to what just happened FROM {{user}}'s INTERNAL point of view.
+- They are how {{user}} FEELS about what {{char}} said or did. They are the unspoken reaction.
+- They are NOT {{char}}'s thoughts. They are NOT narrating {{char}}'s feelings.
+- They do NOT describe what {{char}} is thinking or feeling.
+- If {{char}} said something hurtful: the voices react to the HURT {{user}} feels, not describe {{char}}'s cruelty.
+- Think: what would {{user}} be thinking right now but NOT saying out loud?
 
 CHAT TONE: ${toneDesc}
 
@@ -182,7 +193,10 @@ Stay in each voice's character — use their speaking style, verbal tic, and met
 Be brief — one to three sentences per voice unless something big happened.
 Voices may argue with each other or respond to each other.
 If a voice has nothing to say: [SILENT]
-Do not narrate. Do not describe the scene. React to it.
+
+REMEMBER: These are {{user}}'s INNER thoughts reacting to the scene. They talk ABOUT {{char}} and what happened, not AS {{char}}. They are the part of {{user}} that thinks but doesn't speak.
+
+Do not narrate. Do not describe the scene. Do not write from {{char}}'s perspective. React to it AS {{user}}'s internal fragments.
 
 Format (one per voice, in order):
 [VOICE_NAME]: response or [SILENT]`,
@@ -525,8 +539,13 @@ export async function processMessage(messageText) {
         result.narrator = await narrateBirth(result.newVoice);
     }
 
-    // ─── Step 6: Sidebar commentary ───
-    result.commentary = await generateSidebarCommentary(themes);
+    // ─── Step 6: Sidebar commentary (gated by voice frequency setting) ───
+    voiceMessageCounter++;
+    const voiceFreq = extensionSettings.voiceFrequency || 1;
+    if (voiceMessageCounter >= voiceFreq) {
+        result.commentary = await generateSidebarCommentary(themes);
+        voiceMessageCounter = 0;
+    }
 
     // ─── Step 7: Ambient narrator (if nothing triggered above) ───
     if (!result.narrator) {
@@ -632,6 +651,9 @@ function updateEscalation(impact) {
 // Draw lock — prevents auto-draws when manual draw is in progress
 let drawLock = false;
 export function setDrawLock(locked) { drawLock = locked; }
+
+/** Reset voice frequency counter (call on chat change). */
+export function resetVoiceCounter() { voiceMessageCounter = 0; }
 
 /**
  * Handle card draw based on settings and impact.
