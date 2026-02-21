@@ -1020,7 +1020,12 @@
     perspective: 800px;
     cursor: pointer;
     flex-shrink: 0;
-    transition: opacity 1.5s, transform 1s;
+    transition: opacity 1.5s, transform 1s, z-index 0s;
+    position: relative;
+    z-index: 1;
+}
+.chorus-tarot.flipped {
+    z-index: 10;
 }
 .chorus-tarot.dying {
     opacity: 0;
@@ -1333,7 +1338,8 @@
 
 /* ═══════════════════════════════════════════════════════════════
    REVERSED CARD
-   Shadow aspect — inverted glyph, desaturated, diagonal slash
+   Shadow aspect — inverted layout: ink bleeds down from top,
+   art at bottom, text at top. Card stays right-side up.
    ═══════════════════════════════════════════════════════════════ */
 
 .chorus-tarot--reversed .chorus-tarot__front {
@@ -1357,15 +1363,54 @@
     z-index: 3;
 }
 
-/* Reversed glyph in art area — rotated */
+/* Art moves to bottom of card */
 .chorus-tarot--reversed .chorus-tarot__art {
-    filter: hue-rotate(180deg) brightness(0.85);
+    top: auto;
+    bottom: 12px;
+    filter: brightness(0.85) saturate(0.9);
 }
 
-/* Reversed mark indicator */
+/* Arcana label moves to top */
+.chorus-tarot--reversed .chorus-tarot__arcana-label {
+    top: 14px;
+}
+
+/* Name moves up */
+.chorus-tarot--reversed .chorus-tarot__name {
+    top: 28px;
+}
+
+/* State badge moves up */
+.chorus-tarot--reversed .chorus-tarot__state-badge {
+    top: 52px;
+}
+
+/* Influence label moves to top area */
+.chorus-tarot--reversed .chorus-tarot__influence-label {
+    bottom: auto;
+    top: 72px;
+}
+
+/* Frames get subtle red tint for reversed */
+.chorus-tarot--reversed .chorus-tarot__frame-outer {
+    border-color: rgba(180, 80, 80, 0.15);
+}
+
+/* Reversed ink: anchored to top, bleeds downward */
+.chorus-tarot__ink--reversed {
+    bottom: auto !important;
+    top: 0;
+}
+.chorus-tarot__ink--reversed .chorus-tarot__ink-wave--reversed {
+    top: auto;
+    bottom: -29px;
+    transform: scaleY(-1);
+}
+
+/* Reversed mark indicator — between influence and art */
 .chorus-tarot__reversed-mark {
     position: absolute;
-    top: 38px;
+    top: 92px;
     left: 50%;
     transform: translateX(-50%);
     font-family: var(--chorus-font-mono);
