@@ -936,15 +936,35 @@
     filter: saturate(0.3) brightness(0.5);
 }
 
-/* Reversed */
+/* Reversed — ominous, inverted feel */
 .chorus-spread-card--reversed {
     border-color: var(--chorus-danger-dim) !important;
+    box-shadow: 0 0 12px rgba(255, 34, 68, 0.15), inset 0 0 20px rgba(255, 34, 68, 0.08) !important;
 }
 .chorus-spread-card--reversed .chorus-spread-card__glyph {
     transform: rotate(180deg);
+    filter: hue-rotate(180deg) brightness(0.8);
 }
 .chorus-spread-card--reversed .chorus-spread-card__frame-outer {
     border-color: rgba(136, 51, 51, 0.15);
+}
+.chorus-spread-card--reversed .chorus-spread-card__name {
+    color: var(--chorus-reversal);
+}
+.chorus-spread-card--reversed::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 6px;
+    background: repeating-linear-gradient(
+        -45deg,
+        transparent,
+        transparent 8px,
+        rgba(255, 34, 68, 0.03) 8px,
+        rgba(255, 34, 68, 0.03) 9px
+    );
+    pointer-events: none;
+    z-index: 3;
 }
 
 /* Deal animation */
@@ -1701,6 +1721,16 @@
     letter-spacing: 1px;
 }
 
+/* Reversed commentary — subtle ominous feel */
+.chorus-commentary--reversed {
+    border-left: 2px solid rgba(255, 102, 102, 0.2) !important;
+    background: rgba(255, 34, 68, 0.03);
+}
+
+.chorus-commentary--reversed .chorus-commentary__text {
+    color: #c9a0a0;
+}
+
 .chorus-commentary__body {
     flex: 1;
 }
@@ -1725,6 +1755,216 @@
     color: var(--chorus-text-secondary);
     line-height: 1.4;
     font-style: italic;
+}
+
+
+/* =============================================================================
+   LOG TAB (Chronicle)
+   ============================================================================= */
+
+/* Summary stats bar */
+.chorus-log-stats {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+    padding: 10px 0 14px;
+    border-bottom: 1px solid rgba(201, 168, 76, 0.08);
+    margin-bottom: 14px;
+}
+
+.chorus-log-stat {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+}
+
+.chorus-log-stat__val {
+    font-family: var(--chorus-font-heading);
+    font-size: 18px;
+    color: var(--chorus-gold);
+    letter-spacing: 1px;
+}
+
+.chorus-log-stat__label {
+    font-family: var(--chorus-font-mono);
+    font-size: 7px;
+    letter-spacing: 2px;
+    color: var(--chorus-text-muted);
+    text-transform: uppercase;
+}
+
+/* Individual log entry */
+.chorus-log-entry {
+    display: flex;
+    gap: 10px;
+    padding: 10px 0;
+    border-bottom: 1px solid rgba(201, 168, 76, 0.05);
+    align-items: flex-start;
+}
+
+.chorus-log-entry:last-child {
+    border-bottom: none;
+}
+
+.chorus-log-entry__glyph {
+    font-size: 18px;
+    width: 28px;
+    text-align: center;
+    flex-shrink: 0;
+    margin-top: 2px;
+}
+
+.chorus-log-entry__body {
+    flex: 1;
+    min-width: 0;
+}
+
+.chorus-log-entry__header {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    margin-bottom: 3px;
+}
+
+.chorus-log-entry__icon {
+    font-size: 10px;
+}
+
+.chorus-log-entry__label {
+    font-family: var(--chorus-font-mono);
+    font-size: 8px;
+    letter-spacing: 2px;
+    font-weight: 600;
+}
+
+.chorus-log-entry__time {
+    font-family: var(--chorus-font-mono);
+    font-size: 8px;
+    color: var(--chorus-text-dead);
+    letter-spacing: 1px;
+    margin-left: auto;
+}
+
+.chorus-log-entry__name {
+    font-family: var(--chorus-font-heading);
+    font-size: 12px;
+    letter-spacing: 1px;
+    color: var(--chorus-text-primary);
+}
+
+.chorus-log-entry__arcana {
+    font-family: var(--chorus-font-mono);
+    font-size: 7px;
+    letter-spacing: 2px;
+    color: var(--chorus-text-muted);
+    text-transform: uppercase;
+    margin-top: 1px;
+}
+
+.chorus-log-entry__detail {
+    font-family: var(--chorus-font-body);
+    font-size: 11px;
+    color: var(--chorus-text-secondary);
+    font-style: italic;
+    margin-top: 4px;
+    line-height: 1.4;
+}
+
+.chorus-log-entry__tier {
+    display: inline-block;
+    font-family: var(--chorus-font-mono);
+    font-size: 7px;
+    letter-spacing: 2px;
+    padding: 2px 6px;
+    border-radius: 2px;
+    margin-top: 4px;
+}
+
+/* --- Event type colors --- */
+
+/* Birth — gold glow */
+.chorus-log-entry--birth .chorus-log-entry__icon,
+.chorus-log-entry--birth .chorus-log-entry__label {
+    color: var(--chorus-gold);
+}
+.chorus-log-entry--birth .chorus-log-entry__glyph {
+    filter: drop-shadow(0 0 4px rgba(201, 168, 76, 0.3));
+}
+
+/* Death — muted red */
+.chorus-log-entry--death .chorus-log-entry__icon,
+.chorus-log-entry--death .chorus-log-entry__label {
+    color: #883333;
+}
+.chorus-log-entry--death .chorus-log-entry__name {
+    color: var(--chorus-text-muted);
+    text-decoration: line-through;
+    text-decoration-color: rgba(136, 51, 51, 0.3);
+}
+.chorus-log-entry--death .chorus-log-entry__glyph {
+    opacity: 0.4;
+    filter: saturate(0);
+}
+
+/* Resolved — gentle silver */
+.chorus-log-entry--resolved .chorus-log-entry__icon,
+.chorus-log-entry--resolved .chorus-log-entry__label {
+    color: #8899aa;
+}
+.chorus-log-entry--resolved .chorus-log-entry__glyph {
+    opacity: 0.6;
+}
+
+/* Transformed — purple shift */
+.chorus-log-entry--transformed .chorus-log-entry__icon,
+.chorus-log-entry--transformed .chorus-log-entry__label {
+    color: #aa66cc;
+}
+.chorus-log-entry--transformed .chorus-log-entry__glyph {
+    filter: hue-rotate(90deg);
+}
+
+/* Hijack — danger red */
+.chorus-log-entry--hijack .chorus-log-entry__icon,
+.chorus-log-entry--hijack .chorus-log-entry__label {
+    color: var(--chorus-danger);
+}
+.chorus-log-entry--hijack .chorus-log-entry__tier {
+    background: rgba(255, 34, 68, 0.1);
+    color: var(--chorus-danger);
+    border: 1px solid rgba(255, 34, 68, 0.2);
+}
+
+/* Empty state */
+.chorus-log-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 20px;
+    text-align: center;
+}
+
+.chorus-log-empty__icon {
+    font-size: 32px;
+    opacity: 0.2;
+    margin-bottom: 10px;
+}
+
+.chorus-log-empty__text {
+    font-family: var(--chorus-font-heading);
+    font-size: 12px;
+    letter-spacing: 2px;
+    color: var(--chorus-text-muted);
+}
+
+.chorus-log-empty__sub {
+    font-family: var(--chorus-font-body);
+    font-size: 11px;
+    color: var(--chorus-text-dead);
+    font-style: italic;
+    margin-top: 4px;
 }
 
 
@@ -2176,6 +2416,18 @@
 
 .chorus-btn-danger:active {
     background: rgba(160, 50, 50, 0.35);
+}
+
+.chorus-btn-danger--armed {
+    background: rgba(255, 34, 68, 0.4) !important;
+    border-color: rgba(255, 34, 68, 0.6) !important;
+    color: #fff !important;
+    animation: chorus-danger-pulse 0.8s ease-in-out infinite;
+}
+
+@keyframes chorus-danger-pulse {
+    0%, 100% { box-shadow: 0 0 4px rgba(255, 34, 68, 0.2); }
+    50% { box-shadow: 0 0 12px rgba(255, 34, 68, 0.5); }
 }
 
 
