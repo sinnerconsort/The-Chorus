@@ -64,8 +64,9 @@ function switchTab(tabName) {
 // =============================================================================
 
 function setupDraggableFab() {
+    const $wrapper = $('#chorus-fab-wrapper');
     const $fab = $('#chorus-fab');
-    if (!$fab.length) return;
+    if (!$wrapper.length) return;
 
     let isDragging = false;
     let wasDragged = false;
@@ -77,7 +78,7 @@ function setupDraggableFab() {
 
     const MOVE_THRESHOLD = 8;
 
-    $fab.on('touchstart', function (e) {
+    $wrapper.on('touchstart', function (e) {
         const touch = e.originalEvent.touches[0];
         touchStartTime = Date.now();
         touchStartX = touch.clientX;
@@ -91,7 +92,7 @@ function setupDraggableFab() {
         wasDragged = false;
     });
 
-    $fab.on('touchmove', function (e) {
+    $wrapper.on('touchmove', function (e) {
         const touch = e.originalEvent.touches[0];
         const deltaX = touch.clientX - touchStartX;
         const deltaY = touch.clientY - touchStartY;
@@ -108,13 +109,13 @@ function setupDraggableFab() {
             let newX = fabStartX + deltaX;
             let newY = fabStartY + deltaY;
 
-            const w = $fab.outerWidth();
-            const h = $fab.outerHeight();
+            const w = $wrapper.outerWidth();
+            const h = $wrapper.outerHeight();
             const pad = 5;
             newX = Math.max(pad, Math.min(window.innerWidth - w - pad, newX));
             newY = Math.max(pad, Math.min(window.innerHeight - h - pad, newY));
 
-            $fab.css({
+            $wrapper.css({
                 'left': newX + 'px',
                 'top': newY + 'px',
                 'right': 'auto',
@@ -123,14 +124,14 @@ function setupDraggableFab() {
         }
     });
 
-    $fab.on('touchend', function () {
+    $wrapper.on('touchend', function () {
         isDragging = false;
-        $fab.css('transition', '');
+        $wrapper.css('transition', '');
 
         if (wasDragged) {
             const pos = {
-                left: $fab.css('left'),
-                top: $fab.css('top'),
+                left: $wrapper.css('left'),
+                top: $wrapper.css('top'),
             };
             try {
                 localStorage.setItem('chorus-fab-pos', JSON.stringify(pos));
@@ -142,9 +143,21 @@ function setupDraggableFab() {
     $fab.off('click').on('click', function (e) {
         e.preventDefault();
         e.stopPropagation();
-        if (!wasDragged) {
-            togglePanel();
+        if (wasDragged) {
+            wasDragged = false;
+            return;
         }
+
+        // If flipped (voice has pending DM), open directory for that voice
+        if ($fab.hasClass('chorus-fab--flipped')) {
+            const voiceId = $fab.data('dm-voice-id');
+            if (voiceId) {
+                $(document).trigger('chorus:openDirectory', { voiceId });
+                return;
+            }
+        }
+
+        togglePanel();
         wasDragged = false;
     });
 
@@ -152,7 +165,7 @@ function setupDraggableFab() {
     try {
         const saved = JSON.parse(localStorage.getItem('chorus-fab-pos'));
         if (saved && saved.left && saved.top) {
-            $fab.css({
+            $wrapper.css({
                 'left': saved.left,
                 'top': saved.top,
                 'right': 'auto',
@@ -207,7 +220,6 @@ export async function initUI() {
         const panelHtml = await renderExtensionTemplateAsync(EXTENSION_NAME, 'template');
 
         const $temp = $('<div>').html(panelHtml);
-        $temp.find('#chorus-fab').remove();
 
         const $container = getContainer();
         $temp.children().appendTo($container);
@@ -219,19 +231,20 @@ export async function initUI() {
         $('#chorus-dissolution-overlay').appendTo('body');
         $('#chorus-transform-overlay').appendTo('body');
 
-        // Create FAB with absolute positioning
-        const $fab = $(`<button id="chorus-fab" class="chorus-fab" title="The Chorus">
-            <span class="chorus-fab__glyph">\u25C6</span>
-            <div class="chorus-fab__ink"></div>
-            <div class="chorus-fab__pip"></div>
-        </button>`);
-        $fab.css({
-            'position': 'absolute',
-            'z-index': '99999',
-            'top': 'calc(100vh - 140px)',
-            'right': '15px',
-        });
-        $container.append($fab);
+        // Create FAB with flip-capable wrapper
+        const $fabWrapper = $(`<div id="chorus-fab-wrapper">
+            <button id="chorus-fab" title="The Chorus">
+                <div class="chorus-fab__front">
+                    <span class="chorus-fab__glyph">\u25C6</span>
+                </div>
+                <div class="chorus-fab__back">
+                    <span class="chorus-fab__back-glyph"></span>
+                    <span class="chorus-fab__back-name"></span>
+                    <span class="chorus-fab__back-badge">\u2726</span>
+                </div>
+            </button>
+        </div>`);
+        $container.append($fabWrapper);
 
         setupDraggableFab();
 
@@ -341,7 +354,7 @@ export function destroyUI() {
     cleanupCanvases();
 
     $('#chorus-panel').remove();
-    $('#chorus-fab').remove();
+    $('#chorus-fab-wrapper').remove();
     // These were moved to body in initUI
     $('#chorus-directory-overlay').remove();
     $('#chorus-awakening-overlay').remove();
