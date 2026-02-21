@@ -1024,9 +1024,6 @@
     position: relative;
     z-index: 1;
 }
-.chorus-tarot.flipped {
-    z-index: 10;
-}
 .chorus-tarot.dying {
     opacity: 0;
     transform: scale(0.8) rotateZ(5deg);
