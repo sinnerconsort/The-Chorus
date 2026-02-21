@@ -208,14 +208,18 @@
                     <div class="chorus-setting">
                         <div>
                             <div class="chorus-setting__label">NARRATOR</div>
-                            <div class="chorus-setting__desc">Who narrates the inner world</div>
+                            <div class="chorus-setting__desc">Who narrates the inner world — each has an agenda</div>
                         </div>
-                        <div class="chorus-picker chorus-picker--wrap" id="chorus-setting-narrator">
-                            <button class="chorus-picker__opt active" data-value="stage_manager">STAGE</button>
-                            <button class="chorus-picker__opt" data-value="therapist">SHRINK</button>
-                            <button class="chorus-picker__opt" data-value="framing">FRAME</button>
-                            <button class="chorus-picker__opt" data-value="conscience">SELF</button>
-                        </div>
+                        <select class="chorus-select" id="chorus-setting-narrator">
+                            <option value="stage_manager" selected>Stage Manager — watches the show</option>
+                            <option value="therapist">Therapist — wants you healthy</option>
+                            <option value="framing">Framing — pure atmosphere</option>
+                            <option value="conscience">Conscience — the baseline self</option>
+                            <option value="director">Director — wants drama</option>
+                            <option value="archivist">Archivist — documents everything</option>
+                            <option value="warden">Warden — wants control</option>
+                            <option value="conspirator">Conspirator — sees patterns</option>
+                        </select>
                     </div>
                 </div>
             </div>

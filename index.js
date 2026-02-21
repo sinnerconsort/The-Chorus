@@ -54,6 +54,13 @@ import {
 import { initDirectory, openDirectory } from './src/social/directory.js';
 import { checkOutreach, resetOutreachCooldown } from './src/social/outreach.js';
 import { initCouncil, resetCouncil } from './src/social/council.js';
+import {
+    narrateConsume,
+    narrateMerge,
+    recalculateCoherence,
+    getCoherence,
+    getArchetypeInfo,
+} from './src/voices/narrator.js';
 
 // =============================================================================
 // SETTINGS PANEL (Extensions drawer)
@@ -107,14 +114,6 @@ async function addExtensionSettings() {
         .val(extensionSettings.maxVoices || 5)
         .on('change', function () {
             extensionSettings.maxVoices = parseInt($(this).val(), 10);
-            saveSettings();
-        });
-
-    // Narrator archetype
-    $('#chorus-narrator-archetype')
-        .val(extensionSettings.narratorArchetype || 'stage_manager')
-        .on('change', function () {
-            extensionSettings.narratorArchetype = $(this).val();
             saveSettings();
         });
 }
@@ -391,12 +390,28 @@ async function handleLifecycleEvents(events) {
             case 'consumed': {
                 // Predator devours prey — animate prey being consumed
                 const prey = getVoiceById(event.preyId || event.voiceId);
+                const predator = event.predatorId ? getVoiceById(event.predatorId) : null;
                 if (prey) {
                     const el = document.getElementById(`chorus-card-${prey.id}`);
                     if (el) {
                         el.classList.add('chorus-tarot--consuming');
                         await new Promise(r => setTimeout(r, 1300));
                     }
+                }
+                // Narrator reacts to consume
+                if (predator && prey) {
+                    try {
+                        const narration = await narrateConsume(predator, prey);
+                        if (narration) {
+                            renderSidebarCommentary([{
+                                voiceId: '_narrator',
+                                name: getArchetypeInfo().name,
+                                arcana: 'narrator',
+                                relationship: 'narrator',
+                                text: narration,
+                            }]);
+                        }
+                    } catch (_e) { /* narrator fail is non-critical */ }
                 }
                 if (window.toastr) {
                     toastr.warning(event.message || `${event.predatorName} devoured ${event.preyName}.`, 'Voice Consumed', { timeOut: 5000 });
@@ -412,6 +427,26 @@ async function handleLifecycleEvents(events) {
                 if (el1) el1.classList.add('chorus-tarot--merge-left');
                 if (el2) el2.classList.add('chorus-tarot--merge-right');
                 await new Promise(r => setTimeout(r, 1300));
+                // Narrator reacts to merge
+                if (event.voiceId && event.partnerId && event.newVoiceId) {
+                    try {
+                        const voiceA = getVoiceById(event.voiceId);
+                        const voiceB = getVoiceById(event.partnerId);
+                        const newV = getVoiceById(event.newVoiceId);
+                        if (voiceA && voiceB && newV) {
+                            const narration = await narrateMerge(voiceA, voiceB, newV);
+                            if (narration) {
+                                renderSidebarCommentary([{
+                                    voiceId: '_narrator',
+                                    name: getArchetypeInfo().name,
+                                    arcana: 'narrator',
+                                    relationship: 'narrator',
+                                    text: narration,
+                                }]);
+                            }
+                        }
+                    } catch (_e) { /* narrator fail is non-critical */ }
+                }
                 if (window.toastr) {
                     toastr.info(event.message || `${event.name} and ${event.partnerName} merged.`, 'Voices Merged', { timeOut: 5000 });
                 }
