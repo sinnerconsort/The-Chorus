@@ -36,9 +36,6 @@ const DEFAULT_CHAT_STATE = {
     // Voice deck
     voices: [],
 
-    // Hijack state (null when no hijack active)
-    activeHijack: null,
-
     // Detection accumulators — filled by scanners each message
     emotionAccumulator: {
         heartbreak: 0, rage: 0, euphoria: 0, grief: 0,
@@ -59,7 +56,6 @@ const DEFAULT_CHAT_STATE = {
     // History logs
     birthLog: [],
     deathLog: [],
-    hijackLog: [],
 
     // Council conversation history (persisted per-chat)
     councilHistory: [],
@@ -276,7 +272,6 @@ function sanitizeChatState(state) {
     // Ensure arrays
     if (!Array.isArray(state.birthLog)) state.birthLog = [];
     if (!Array.isArray(state.deathLog)) state.deathLog = [];
-    if (!Array.isArray(state.hijackLog)) state.hijackLog = [];
 
     // Ensure escalation is valid
     const validEscalations = ['calm', 'rising', 'elevated', 'crisis'];
@@ -347,7 +342,7 @@ function sanitizeVoice(voice) {
     sanitized.influence = Math.max(0, Math.min(100, sanitized.influence || 0));
 
     // Validate state
-    const validStates = ['dormant', 'active', 'agitated', 'hijacking', 'dead',
+    const validStates = ['dormant', 'active', 'agitated', 'dead',
         'fading', 'resolving', 'transforming'];
     if (!validStates.includes(sanitized.state)) {
         sanitized.state = 'dormant';
@@ -658,11 +653,10 @@ export function clearThemeAccumulation(theme) {
  * Get logs.
  */
 export function getLogs() {
-    if (!chatState) return { births: [], deaths: [], hijacks: [] };
+    if (!chatState) return { births: [], deaths: [] };
     return {
         births: chatState.birthLog,
         deaths: chatState.deathLog,
-        hijacks: chatState.hijackLog,
     };
 }
 
@@ -865,14 +859,12 @@ export function adjustInfluence(voiceId, delta) {
     voice.influence = Math.max(0, Math.min(100, voice.influence + delta));
 
     // Auto-update state based on influence thresholds
-    if (voice.state !== 'hijacking') {
-        if (voice.influence >= 70) {
-            voice.state = 'agitated';
-        } else if (voice.influence >= 20) {
-            voice.state = 'active';
-        } else {
-            voice.state = 'dormant';
-        }
+    if (voice.influence >= 70) {
+        voice.state = 'agitated';
+    } else if (voice.influence >= 20) {
+        voice.state = 'active';
+    } else {
+        voice.state = 'dormant';
     }
 
     if (voice.influence !== oldInfluence) {
@@ -988,7 +980,7 @@ export function decayAllInfluence(amount = 1) {
     if (changed) {
         // Recalculate states
         for (const voice of chatState.voices) {
-            if (voice.state === 'dead' || voice.state === 'hijacking') continue;
+            if (voice.state === 'dead') continue;
             if (voice.influence >= 70) voice.state = 'agitated';
             else if (voice.influence >= 20) voice.state = 'active';
             else voice.state = 'dormant';
@@ -1084,65 +1076,6 @@ export function decayAccumulators(amount = 2) {
             chatState.physicalAccumulator[key] - amount);
     }
     saveChatState();
-}
-
-// =============================================================================
-// HIJACK STATE
-// =============================================================================
-
-/**
- * Start a hijack.
- */
-export function startHijack(voiceId, tier, messagesRemaining) {
-    if (!chatState) return;
-
-    const voice = getVoiceById(voiceId);
-    if (!voice) return;
-
-    voice.state = 'hijacking';
-    chatState.activeHijack = {
-        voiceId,
-        tier,
-        messagesRemaining,
-        startedAt: Date.now(),
-    };
-
-    chatState.hijackLog.push({
-        voiceId,
-        name: voice.name,
-        tier,
-        timestamp: Date.now(),
-    });
-
-    saveChatState();
-    console.log(`${LOG_PREFIX} Hijack started: ${voice.name} (Tier ${tier})`);
-}
-
-/**
- * End the current hijack.
- */
-export function endHijack() {
-    if (!chatState || !chatState.activeHijack) return;
-
-    const voice = getVoiceById(chatState.activeHijack.voiceId);
-    if (voice && voice.state === 'hijacking') {
-        // Recalculate state from influence
-        if (voice.influence >= 70) voice.state = 'agitated';
-        else if (voice.influence >= 20) voice.state = 'active';
-        else voice.state = 'dormant';
-    }
-
-    chatState.activeHijack = null;
-    saveChatState();
-    console.log(`${LOG_PREFIX} Hijack ended`);
-}
-
-/**
- * Get active hijack state (or null).
- */
-export function getActiveHijack() {
-    if (!chatState) return null;
-    return chatState.activeHijack;
 }
 
 // =============================================================================
