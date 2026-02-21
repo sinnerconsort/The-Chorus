@@ -1017,12 +1017,14 @@
 .chorus-tarot {
     width: 170px;
     height: 275px;
-    perspective: 800px;
+    perspective: 1200px;
     cursor: pointer;
     flex-shrink: 0;
     transition: opacity 1.5s, transform 1s;
     position: relative;
     z-index: 1;
+    clip-path: inset(0 round 8px);
+    -webkit-clip-path: inset(0 round 8px);
 }
 .chorus-tarot.dying {
     opacity: 0;
