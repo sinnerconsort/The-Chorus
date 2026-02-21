@@ -461,6 +461,26 @@ export function getLivingVoices() {
 }
 
 /**
+ * Get all arcana currently used by living voices.
+ * @returns {string[]} Array of arcana keys (e.g. ['fool', 'tower', 'lovers'])
+ */
+export function getTakenArcana() {
+    return getLivingVoices().map(v => v.arcana);
+}
+
+/**
+ * Get the weakest living voice (lowest influence, not core depth).
+ * Used for full-deck heal/consume behavior.
+ * @returns {Object|null} The weakest eligible voice
+ */
+export function getWeakestVoice() {
+    const eligible = getLivingVoices()
+        .filter(v => v.depth !== 'core')
+        .sort((a, b) => (a.influence || 0) - (b.influence || 0));
+    return eligible[0] || null;
+}
+
+/**
  * Get a single voice by ID.
  */
 export function getVoiceById(id) {

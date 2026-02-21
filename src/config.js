@@ -21,13 +21,12 @@ export const DEFAULT_SETTINGS = {
 
     // Deck
     maxVoices: 7,
-    autoEgoDeath: true,
+    fullDeckBehavior: 'block',  // 'block' | 'merge' | 'heal' | 'consume'
     birthSensitivity: 3,
 
     // Readings
     drawMode: 'auto',          // 'auto' | 'manual'
-    drawFrequency: 1,          // every N messages (auto mode)
-    spreadTrigger: 'auto',     // 'auto' (on severity) | 'manual'
+    spreadSeverity: 'medium',  // 'low' | 'medium' | 'high' — when auto upgrades to spread
     reversalChance: 15,
 
     // Influence
@@ -37,6 +36,10 @@ export const DEFAULT_SETTINGS = {
     // Hijack
     hijackEnabled: false,
     hijackMaxTier: 1,
+
+    // Council
+    councilAutoContinue: true,
+    councilSpeed: 'normal',    // 'fast' | 'normal' | 'slow'
 };
 
 // =============================================================================
