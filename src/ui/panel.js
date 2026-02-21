@@ -9,6 +9,7 @@ import { extensionSettings, getContainer, panelOpen, setPanelOpen, saveSettings 
 import { renderDeck, cleanupCanvases } from './deck.js';
 import { initReadingTab, clearSidebar } from './reading.js';
 import { activateCouncil, deactivateCouncil } from '../social/council.js';
+import { renderLog } from './log.js';
 
 // =============================================================================
 // PANEL TOGGLE
@@ -56,6 +57,12 @@ function switchTab(tabName) {
     currentTab = tabName;
     if (tabName === 'council') {
         activateCouncil();
+    }
+    if (tabName === 'log') {
+        renderLog();
+    }
+    if (tabName === 'deck') {
+        renderDeck();
     }
 }
 
