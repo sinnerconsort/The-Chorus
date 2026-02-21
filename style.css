@@ -1110,91 +1110,61 @@
     background: #0a0612;
 }
 
-/* Arcana glyph — the card's visual identity */
+/* Arcana glyph — clean symbol, matches council style */
 .chorus-tarot__glyph {
     font-size: 80px;
     line-height: 1;
     user-select: none;
-    position: relative;
     animation: chorus-glyph-alive 6s ease-in-out infinite;
 }
 
-/* Pulsing glow halo behind glyph */
-.chorus-tarot__glyph::after {
-    content: '';
-    position: absolute;
-    inset: -20px;
-    border-radius: 50%;
-    background: radial-gradient(circle, currentColor 0%, transparent 70%);
-    opacity: 0;
-    animation: chorus-glyph-halo 4s ease-in-out infinite;
-    pointer-events: none;
-    z-index: -1;
-}
-
-/* Dormant: dim, slow breathe only */
+/* Dormant: dim, slow breathe */
 .chorus-tarot--dormant .chorus-tarot__glyph {
-    opacity: 0.3;
     animation: chorus-glyph-dormant 8s ease-in-out infinite;
 }
-.chorus-tarot--dormant .chorus-tarot__glyph::after {
-    animation: none;
-    opacity: 0;
-}
 
-/* Agitated: fast flicker + jitter + intense glow */
+/* Agitated: jitter + flicker */
 .chorus-tarot--agitated .chorus-tarot__glyph {
     animation: chorus-glyph-agitated 0.3s ease-in-out infinite;
-}
-.chorus-tarot--agitated .chorus-tarot__glyph::after {
-    animation: chorus-glyph-halo-agitated 0.6s ease-in-out infinite;
 }
 
 /* Dead: ghost */
 .chorus-tarot--dead .chorus-tarot__glyph {
     opacity: 0.08;
     filter: grayscale(1) blur(1px);
-    text-shadow: none !important;
     animation: none;
-}
-.chorus-tarot--dead .chorus-tarot__glyph::after {
-    animation: none;
-    opacity: 0;
 }
 
 /* --- Keyframes --- */
 
-/* Active: float + breathe + gentle scale */
 @keyframes chorus-glyph-alive {
     0%, 100% {
-        opacity: 0.55;
-        transform: translateY(0) scale(1) rotate(0deg);
+        opacity: 0.6;
+        transform: translateY(0) scale(1);
         filter: brightness(0.9);
     }
     25% {
-        opacity: 0.8;
-        transform: translateY(-5px) scale(1.04) rotate(1deg);
-        filter: brightness(1.15);
+        opacity: 0.85;
+        transform: translateY(-4px) scale(1.03);
+        filter: brightness(1.1);
     }
     50% {
         opacity: 1;
-        transform: translateY(-2px) scale(1.01) rotate(0deg);
-        filter: brightness(1.3);
+        transform: translateY(-1px) scale(1.01);
+        filter: brightness(1.25);
     }
     75% {
-        opacity: 0.7;
-        transform: translateY(4px) scale(0.97) rotate(-1deg);
+        opacity: 0.75;
+        transform: translateY(3px) scale(0.98);
         filter: brightness(1.0);
     }
 }
 
-/* Dormant: slow dim breathe */
 @keyframes chorus-glyph-dormant {
     0%, 100% { opacity: 0.2; filter: brightness(0.7); }
     50% { opacity: 0.4; filter: brightness(0.9); }
 }
 
-/* Agitated: jitter + flicker */
 @keyframes chorus-glyph-agitated {
     0%, 100% {
         opacity: 0.5;
@@ -1216,18 +1186,6 @@
         transform: translate(-2px, 3px) rotate(-1deg);
         filter: brightness(1.3);
     }
-}
-
-/* Glow halo: gentle pulse behind glyph */
-@keyframes chorus-glyph-halo {
-    0%, 100% { opacity: 0.03; transform: scale(0.8); }
-    50% { opacity: 0.12; transform: scale(1.2); }
-}
-
-/* Agitated halo: intense rapid pulse */
-@keyframes chorus-glyph-halo-agitated {
-    0%, 100% { opacity: 0.1; transform: scale(1); }
-    50% { opacity: 0.3; transform: scale(1.5); }
 }
 
 /* Front face text */
