@@ -14,7 +14,7 @@
  *
  * Coherence System:
  *   The narrator starts at 100 coherence. As the deck fills, as voices
- *   gain influence, as hijacks happen — coherence drops. Low coherence
+ *   gain influence — coherence drops. Low coherence
  *   changes HOW the narrator speaks: it contradicts itself, gets things
  *   wrong, shows cracks in its mask. At very low coherence, the narrator
  *   is almost unrecognizable from its original self.
@@ -188,9 +188,9 @@ export function recalculateCoherence() {
     // Power outliers (voices above 80 influence)
     const powerPenalty = living.filter(v => (v.influence || 0) > 80).length * 5;
 
-    // Agitated / hijacking voices
+    // Agitated voices
     const agitatedPenalty = living.filter(v =>
-        v.state === 'agitated' || v.state === 'hijacking'
+        v.state === 'agitated'
     ).length * 8;
 
     const target = Math.max(0, Math.min(100,
@@ -540,37 +540,6 @@ Your coherence: ${narrator.coherence}/100.`;
         return cleanResponse(response);
     } catch (e) {
         console.error(`${LOG_PREFIX} Narrator escalation failed:`, e);
-        return null;
-    }
-}
-
-export async function narrateHijack(tier, voice) {
-    const archetype = getArchetype();
-    if (!archetype.triggers.hijack) return null;
-
-    // Hijacks degrade coherence
-    adjustNarratorCoherence(tier === 'possession' ? -15 : tier === 'struggle' ? -8 : -3);
-
-    const arc = getArcana(voice.arcana);
-    const narrator = getNarrator();
-    const opinion = narrator.voiceOpinions?.[voice.id] || 'Unknown threat.';
-
-    const context = `${voice.name} (${arc.name}) is attempting to take control.
-Hijack tier: ${tier}
-Voice influence: ${voice.influence}/100
-YOUR OPINION OF THIS VOICE: ${opinion}
-Your coherence: ${narrator.coherence}/100.
-${tier === 'possession' ? 'This is a full lockout. You are losing control completely.' : ''}`;
-
-    try {
-        const messages = buildEventPrompt(archetype, `HIJACK — ${tier.toUpperCase()}`, context);
-        const response = await sendRequest(messages, 180);
-        markSpoke();
-        // Fire-and-forget opinion update
-        updateVoiceOpinion(voice.id, `Attempted ${tier}-level hijack`);
-        return cleanResponse(response);
-    } catch (e) {
-        console.error(`${LOG_PREFIX} Narrator hijack failed:`, e);
         return null;
     }
 }
