@@ -44,6 +44,10 @@ const DEFAULT_CHAT_STATE = {
         intimacy: 0, adrenaline: 0,
     },
 
+    // Theme accumulation tracker — for "death by a thousand cuts" births
+    // { theme: { count: 0, messages: 0 } } — count = weighted score, messages = unique message count
+    themeAccumulator: {},
+
     // Escalation level (driven by accumulators)
     escalation: 'calm',
 
@@ -260,6 +264,9 @@ function sanitizeChatState(state) {
     if (!state.physicalAccumulator || typeof state.physicalAccumulator !== 'object') {
         state.physicalAccumulator = deepClone(DEFAULT_CHAT_STATE.physicalAccumulator);
     }
+    if (!state.themeAccumulator || typeof state.themeAccumulator !== 'object') {
+        state.themeAccumulator = {};
+    }
 
     // Ensure arrays
     if (!Array.isArray(state.birthLog)) state.birthLog = [];
@@ -317,6 +324,8 @@ function sanitizeVoice(voice) {
 
         // Depth & lifecycle
         depth: 'rooted',           // 'surface' | 'rooted' | 'core'
+        reversed: false,           // Born from shadow aspect of arcana
+        birthType: 'event',        // 'event' | 'persona' | 'accumulation' | 'transform' | 'merge'
         resolution: {
             type: 'endure',
             condition: '',         // Natural language (hidden from user)
@@ -494,6 +503,61 @@ export function getAccumulators() {
         emotion: chatState.emotionAccumulator,
         physical: chatState.physicalAccumulator,
     };
+}
+
+/**
+ * Get theme accumulator (for accumulation births).
+ */
+export function getThemeAccumulator() {
+    if (!chatState) return {};
+    if (!chatState.themeAccumulator) chatState.themeAccumulator = {};
+    return chatState.themeAccumulator;
+}
+
+/**
+ * Update theme accumulator — increment themes from this message, decay others.
+ * @param {string[]} themes - Themes present in this message
+ * @param {number} decayRate - How fast absent themes decay
+ * @returns {Object[]} Array of { theme, count, messages } for themes that crossed threshold
+ */
+export function updateThemeAccumulator(themes = [], decayRate = 0.3) {
+    if (!chatState) return [];
+    if (!chatState.themeAccumulator) chatState.themeAccumulator = {};
+
+    const acc = chatState.themeAccumulator;
+    const peaked = [];
+
+    // Increment present themes
+    for (const theme of themes) {
+        if (!acc[theme]) {
+            acc[theme] = { count: 0, messages: 0 };
+        }
+        acc[theme].count += 1;
+        acc[theme].messages += 1;
+    }
+
+    // Decay absent themes
+    for (const key of Object.keys(acc)) {
+        if (!themes.includes(key)) {
+            acc[key].count = Math.max(0, acc[key].count - decayRate);
+            // Clean up dead accumulators
+            if (acc[key].count <= 0 && acc[key].messages <= 1) {
+                delete acc[key];
+            }
+        }
+    }
+
+    saveChatState();
+    return acc;
+}
+
+/**
+ * Clear a specific theme from the accumulator (after birth).
+ */
+export function clearThemeAccumulation(theme) {
+    if (!chatState?.themeAccumulator) return;
+    delete chatState.themeAccumulator[theme];
+    saveChatState();
 }
 
 /**
