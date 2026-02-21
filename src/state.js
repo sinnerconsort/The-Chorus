@@ -413,6 +413,18 @@ export function saveChatState() {
 }
 
 /**
+ * Reset all Chorus state for the current chat.
+ * Wipes voices, logs, accumulators — fresh start.
+ */
+export function resetChatState() {
+    if (!chatState) return;
+
+    chatState = deepClone(DEFAULT_CHAT_STATE);
+    saveChatState();
+    console.log(`${LOG_PREFIX} Chat state reset to default`);
+}
+
+/**
  * Check if we have an active chat with loaded state.
  */
 export function hasActiveChat() {

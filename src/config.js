@@ -105,42 +105,51 @@ export const SPREAD_POSITIONS = {
         present: {
             name: 'The Present',
             framing: 'React to what just happened. Speak from your nature.',
+            reversed: 'What you usually see clearly is clouded now. Your certainty is misplaced. Speak from your blind spot — the thing you always get wrong.',
         },
     },
     three: {
         situation: {
-            name: 'Situation',
-            framing: 'Describe what is really happening here, beneath the surface.',
+            name: 'The Situation',
+            framing: 'What is REALLY happening beneath the surface? Not what it looks like — what it IS. Use your metaphor domain to dissect the truth.',
+            reversed: 'You are reading the situation wrong. Your lens is distorting the truth. What are you projecting onto this moment that isn\'t actually there?',
         },
         advice: {
-            name: 'Advice',
-            framing: 'What should {{user}} do? Speak from your experience.',
+            name: 'The Counsel',
+            framing: 'What should {{user}} do? Speak from your obsession, your wound, your experience. Be specific — not "be careful" but what EXACTLY to do or say.',
+            reversed: 'Your advice is tainted by your blind spot. You are recommending what YOU need, not what {{user}} needs. The guidance is self-serving even if you can\'t see it.',
         },
         outcome: {
-            name: 'Outcome',
-            framing: 'Where does this lead if things continue? Predict.',
+            name: 'The Shadow Ahead',
+            framing: 'Where does this path lead? Not a vague warning — a specific vision of what happens if things continue this way. Be a prophet, not a fortune cookie.',
+            reversed: 'Your prediction is colored by fear or desire. You are seeing the future you expect, not the one that\'s coming. What outcome are you too afraid to consider?',
         },
     },
     cross: {
         heart: {
-            name: 'Heart',
-            framing: 'What is this moment really about? Cut to the core.',
+            name: 'Heart of the Matter',
+            framing: 'Strip away everything else. What is this ACTUALLY about? The real thing underneath the thing. One truth.',
+            reversed: 'You can\'t see the real issue because you ARE the real issue. Your fragment of {{user}}\'s psyche is the knot at the center. Confess.',
         },
         crossing: {
-            name: 'Crossing',
-            framing: 'What stands in the way? What is the obstacle?',
+            name: 'What Stands Against',
+            framing: 'What is the obstacle? Not an external enemy — the internal resistance. What part of {{user}} is fighting this?',
+            reversed: 'The obstacle is you. This voice, this fragment, is what\'s in the way. How are you sabotaging {{user}} right now?',
         },
         foundation: {
-            name: 'Foundation',
-            framing: 'What brought us here? What is the history?',
+            name: 'The Root',
+            framing: 'What history led here? What old wound, old pattern, old promise is at the bottom of this? Reference {{user}}\'s persona if you can.',
+            reversed: 'The history you remember is wrong, or you\'re remembering selectively. What part of the past are you deliberately not mentioning?',
         },
         crown: {
-            name: 'Crown',
-            framing: 'What does {{user}} want? What are they reaching for?',
+            name: 'The Desire',
+            framing: 'What does {{user}} actually want? Not what they say they want — the real hunger underneath. Name it.',
+            reversed: 'The desire is destructive, or it\'s a substitute for the real need. {{user}} is chasing the wrong thing and you know it. What do they ACTUALLY need?',
         },
         outcome: {
-            name: 'Outcome',
-            framing: 'Where does this end? What is coming?',
+            name: 'What Comes',
+            framing: 'The end of this thread. Not hope, not fear — your honest read on where this arrives. Be specific and unflinching.',
+            reversed: 'You can\'t see the ending clearly because you\'re too invested in a particular outcome. What are you too attached to? What ending would break you?',
         },
     },
 };
