@@ -34,6 +34,7 @@ import {
     getLivingVoices,
     getVoiceById,
     getVoicesWithPendingDMs,
+    getArcana,
 } from './src/state.js';
 import { initUI, destroyUI, refreshUI } from './src/ui/panel.js';
 import { processMessage, initializeFromPersona, resetVoiceCounter } from './src/voices/voice-engine.js';
@@ -200,20 +201,36 @@ function onChatChanged() {
 }
 
 /**
- * Update UI indicators for pending voice DMs.
- * - FAB pip pulses when any voice has a pending DM
- * - Card unread badges (handled by deck.js renderDeck)
+ * Update FAB state for pending voice DMs.
+ * FAB flips to show mini card with voice glyph + name when DM pending.
+ * Flips back when cleared.
  */
 function updateOutreachUI() {
     const pending = getVoicesWithPendingDMs();
-    const $pip = $('.chorus-fab__pip');
+    const $fab = $('#chorus-fab');
 
     if (pending.length > 0) {
-        $pip.addClass('has-dm');
-        $pip.attr('title', `${pending.length} voice${pending.length > 1 ? 's' : ''} reaching out`);
+        // Use the first pending voice for the mini card
+        const voice = pending[0];
+        const arcana = getArcana(voice.arcana);
+
+        // Populate back face
+        $('.chorus-fab__back-glyph').text(arcana.glyph || '🂠');
+        $('.chorus-fab__back-name').text(voice.name.toUpperCase());
+
+        // Set color CSS vars on the FAB
+        $fab.css({
+            '--fab-dm-color': arcana.glow || 'rgba(201, 168, 76, 0.4)',
+            '--fab-dm-glow': (arcana.glow || 'rgba(201, 168, 76, 0.15)'),
+        });
+
+        // Flip it
+        $fab.addClass('chorus-fab--flipped');
+        $fab.data('dm-voice-id', voice.id);
     } else {
-        $pip.removeClass('has-dm');
-        $pip.attr('title', '');
+        // Unflip
+        $fab.removeClass('chorus-fab--flipped');
+        $fab.removeData('dm-voice-id');
     }
 }
 
