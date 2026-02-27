@@ -36,6 +36,10 @@ export const DEFAULT_SETTINGS = {
     // Council
     councilAutoContinue: true,
     councilSpeed: 'normal',    // 'fast' | 'normal' | 'slow'
+
+    // World Info
+    includeWorldInfo: false,   // Include lorebook entries in voice context
+    worldInfoMaxEntries: 5,    // Cap entries to limit token cost
 };
 
 // =============================================================================

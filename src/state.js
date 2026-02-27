@@ -319,6 +319,10 @@ function sanitizeVoice(voice) {
         lastCommentary: '',
         silentStreak: 0,
 
+        // Evolving thought store (brain engine pattern)
+        thoughts: {},          // { key: 'First-person thought sentence' }
+        maxThoughts: 5,        // Cap per voice
+
         // Outreach (voice-initiated DMs)
         pendingDM: null,       // { text, trigger, timestamp } or null
 
@@ -378,6 +382,14 @@ function sanitizeVoice(voice) {
 
     // Ensure history array
     if (!Array.isArray(sanitized.directoryHistory)) sanitized.directoryHistory = [];
+
+    // Ensure thoughts object
+    if (!sanitized.thoughts || typeof sanitized.thoughts !== 'object') {
+        sanitized.thoughts = {};
+    }
+    if (typeof sanitized.maxThoughts !== 'number') {
+        sanitized.maxThoughts = 5;
+    }
 
     return sanitized;
 }
@@ -843,6 +855,78 @@ export function updateVoice(voiceId, updates) {
 }
 
 // =============================================================================
+// VOICE THOUGHTS (Brain Engine pattern)
+// =============================================================================
+
+/**
+ * Update a voice's thought store with parsed operations.
+ * @param {string} voiceId
+ * @param {Object[]} operations - [{ op: 'set'|'delete', key, value? }]
+ * @returns {string[]} Log of changes for debugging
+ */
+export function applyThoughtOperations(voiceId, operations) {
+    const voice = getVoiceById(voiceId);
+    if (!voice) return [];
+
+    if (!voice.thoughts || typeof voice.thoughts !== 'object') {
+        voice.thoughts = {};
+    }
+
+    const log = [];
+    const max = voice.maxThoughts || 5;
+
+    for (const op of operations) {
+        if (!op.key || typeof op.key !== 'string') continue;
+        const key = op.key.toLowerCase().replace(/\s+/g, '_').substring(0, 40);
+
+        if (op.op === 'delete') {
+            if (voice.thoughts[key]) {
+                delete voice.thoughts[key];
+                log.push(`- ${key}`);
+            }
+        } else {
+            // set (create or update)
+            const value = (op.value || '').substring(0, 200);
+            if (!value) continue;
+
+            const isNew = !voice.thoughts[key];
+            voice.thoughts[key] = value;
+            log.push(`${isNew ? '+' : '~'} ${key}: ${value}`);
+
+            // Enforce cap — drop oldest key if over limit
+            const keys = Object.keys(voice.thoughts);
+            if (keys.length > max) {
+                const oldest = keys[0]; // First key = oldest insertion
+                delete voice.thoughts[oldest];
+                log.push(`- ${oldest} (cap)`);
+            }
+        }
+    }
+
+    if (log.length > 0) {
+        saveChatState();
+    }
+    return log;
+}
+
+/**
+ * Serialize a voice's thoughts for prompt injection.
+ * @param {string} voiceId
+ * @returns {string} Formatted thought block or empty string
+ */
+export function serializeThoughts(voiceId) {
+    const voice = getVoiceById(voiceId);
+    if (!voice?.thoughts) return '';
+
+    const entries = Object.entries(voice.thoughts);
+    if (entries.length === 0) return '';
+
+    return entries
+        .map(([key, value]) => `${key}: "${value}"`)
+        .join('\n');
+}
+
+// =============================================================================
 // INFLUENCE HELPERS
 // =============================================================================
 
@@ -1107,3 +1191,83 @@ export function hexToRgb(hex) {
 export function getContainer() {
     return $('#sheld').length ? $('#sheld') : $('body');
 }
+
+// =============================================================================
+// CROSS-EXTENSION API
+// =============================================================================
+
+/**
+ * Public API for other extensions to read Chorus state.
+ * Read-only — external extensions cannot modify voices.
+ *
+ * Usage from another extension:
+ *   if (window.ChorusEngine?.isAvailable()) {
+ *       const voices = window.ChorusEngine.getVoices();
+ *       const thoughts = window.ChorusEngine.getThoughts('voice_001');
+ *   }
+ */
+window.ChorusEngine = {
+    /** Check if The Chorus is loaded and has an active chat. */
+    isAvailable: () => {
+        return !!chatState && extensionSettings.enabled;
+    },
+
+    /** Get all living (non-dead) voices. Returns shallow copies. */
+    getVoices: () => {
+        return getLivingVoices().map(v => ({ ...v }));
+    },
+
+    /** Get a specific voice by ID or name. */
+    getVoice: (idOrName) => {
+        const voice = getVoiceById(idOrName)
+            || getLivingVoices().find(v =>
+                v.name.toLowerCase() === (idOrName || '').toLowerCase(),
+            );
+        return voice ? { ...voice } : null;
+    },
+
+    /** Get a voice's current thought store. */
+    getThoughts: (voiceId) => {
+        const voice = getVoiceById(voiceId);
+        return voice?.thoughts ? { ...voice.thoughts } : null;
+    },
+
+    /** Get current escalation level. */
+    getEscalation: () => getEscalation(),
+
+    /** Get all voice names. */
+    getVoiceNames: () => getLivingVoices().map(v => v.name),
+
+    /** Get influence level for a voice (by ID or name). */
+    getInfluence: (idOrName) => {
+        const voice = window.ChorusEngine.getVoice(idOrName);
+        return voice ? voice.influence : null;
+    },
+
+    /** Get the current narrator state (archetype, coherence). */
+    getNarrator: () => {
+        if (!chatState?.narrator) return null;
+        return {
+            archetype: extensionSettings.narratorArchetype,
+            coherence: chatState.narrator.coherence,
+            active: chatState.narrator.active,
+        };
+    },
+
+    /** Get deck summary (voice count, max, escalation). */
+    getDeckSummary: () => {
+        const living = getLivingVoices();
+        return {
+            voiceCount: living.length,
+            maxVoices: extensionSettings.maxVoices || 7,
+            escalation: getEscalation(),
+            voices: living.map(v => ({
+                name: v.name,
+                arcana: v.arcana,
+                influence: v.influence,
+                relationship: v.relationship,
+                state: v.state,
+            })),
+        };
+    },
+};
