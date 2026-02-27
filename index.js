@@ -37,7 +37,7 @@ import {
     getArcana,
 } from './src/state.js';
 import { initUI, destroyUI, refreshUI } from './src/ui/panel.js';
-import { processMessage, initializeFromPersona, resetVoiceCounter } from './src/voices/voice-engine.js';
+import { processMessage, initializeFromPersona, resetVoiceCounter, abortGeneration } from './src/voices/voice-engine.js';
 import {
     renderSidebarCommentary,
     renderCardReading,
@@ -116,6 +116,14 @@ async function addExtensionSettings() {
             extensionSettings.maxVoices = parseInt($(this).val(), 10);
             saveSettings();
         });
+
+    // Include World Info toggle
+    $('#chorus-include-worldinfo')
+        .prop('checked', extensionSettings.includeWorldInfo || false)
+        .on('change', function () {
+            extensionSettings.includeWorldInfo = $(this).prop('checked');
+            saveSettings();
+        });
 }
 
 // =============================================================================
@@ -178,6 +186,9 @@ async function handleManualExtract() {
 }
 
 function onChatChanged() {
+    // Abort any in-progress generation from previous chat
+    abortGeneration();
+
     // Load per-chat voice state from chat_metadata
     loadChatState();
 
@@ -292,6 +303,12 @@ async function onMessageReceived() {
 
         // Run the full voice engine pipeline
         const result = await processMessage(messageText);
+
+        // Check if aborted (don't render stale results)
+        if (result.aborted) {
+            hideSidebarLoading();
+            return;
+        }
 
         // Hide loading
         hideSidebarLoading();
