@@ -41,6 +41,7 @@ import {
     updateVoice,
     adjustInfluence,
     saveChatState,
+    serializeThoughts,
 } from '../state.js';
 
 // =============================================================================
@@ -149,6 +150,10 @@ Thinks In Terms Of: ${v.metaphorDomain || 'general'}
 Verbal Tic: ${v.verbalTic || 'N/A'}
 Relationship with {{user}}: ${v.relationship} | Influence: ${v.influence}/100
 Self-Awareness: ${v.selfAwareness || 'N/A'}
+${(() => {
+    const thoughtBlock = serializeThoughts(v.id);
+    return thoughtBlock ? `Current Preoccupations:\n${thoughtBlock}` : '';
+})()}
 ${relLines ? `Opinions of other voices:\n${relLines}` : ''}`;
     }).join('\n');
 }

@@ -30,6 +30,7 @@ import {
     adjustInfluence,
     clearPendingDM,
     saveChatState,
+    serializeThoughts,
 } from '../state.js';
 
 // =============================================================================
@@ -142,7 +143,12 @@ Influence: ${voice.influence}/100
 
 BIRTH MEMORY — the moment that created you:
 ${voice.birthMoment || '(Unknown origin)'}
-
+${(() => {
+    const thoughtBlock = serializeThoughts(voice.id);
+    return thoughtBlock
+        ? `\nCURRENT PREOCCUPATIONS (what you've been thinking about lately):\n${thoughtBlock}\nThese color how you engage in this conversation.\n`
+        : '';
+})()}
 {{user}}'s PERSONA:
 ${persona}
 
