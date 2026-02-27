@@ -68,109 +68,6 @@ const DEFAULT_CHAT_STATE = {
 // DEMO VOICES (loaded for fresh chats / demo mode)
 // =============================================================================
 
-const DEMO_VOICES = [
-    {
-        id: 'voice_001',
-        name: 'The Wounded',
-        arcana: 'tower',
-        personality: 'Born from betrayal. Bitter, sharp-tongued, always watching for the next knife.',
-        speakingStyle: 'Bitter. Short sentences. References the betrayal.',
-        birthMoment: 'When she revealed she never loved you.',
-        birthMessageId: 42,
-        influence: 72,
-        state: 'agitated',
-        relationship: 'resentful',
-        relationships: {},
-        influenceTriggers: {
-            raises: ['emotional pain', 'rejection', 'loneliness'],
-            lowers: ['connection', 'healing', 'being heard'],
-        },
-        directoryHistory: [],
-        created: Date.now() - 86400000,
-        lastSpoke: Date.now() - 3600000,
-    },
-    {
-        id: 'voice_002',
-        name: 'The Charming',
-        arcana: 'lovers',
-        personality: 'Born from the first genuine connection. Warm, flirtatious, sees the best in people.',
-        speakingStyle: 'Playful. Uses endearments. Speaks in questions.',
-        birthMoment: 'The first time someone looked at you like you mattered.',
-        birthMessageId: 15,
-        influence: 45,
-        state: 'active',
-        relationship: 'curious',
-        relationships: {},
-        influenceTriggers: {
-            raises: ['romance', 'charm', 'social success'],
-            lowers: ['rejection', 'isolation'],
-        },
-        directoryHistory: [],
-        created: Date.now() - 172800000,
-        lastSpoke: Date.now() - 7200000,
-    },
-    {
-        id: 'voice_003',
-        name: 'The Reckless',
-        arcana: 'fool',
-        personality: 'Born from the moment you stopped caring about consequences. Wild, loud, free.',
-        speakingStyle: 'ALL CAPS when excited. Short bursts. Dares and challenges.',
-        birthMoment: 'When you jumped without looking and survived.',
-        birthMessageId: 28,
-        influence: 58,
-        state: 'active',
-        relationship: 'manic',
-        relationships: {},
-        influenceTriggers: {
-            raises: ['danger', 'thrill', 'recklessness'],
-            lowers: ['caution', 'planning', 'safety'],
-        },
-        directoryHistory: [],
-        created: Date.now() - 259200000,
-        lastSpoke: Date.now() - 1800000,
-    },
-    {
-        id: 'voice_004',
-        name: 'The Hollow',
-        arcana: 'moon',
-        personality: 'Born from the fog of not knowing who you are. Quiet, uncertain, drifting.',
-        speakingStyle: 'Trailing off... Uses ellipses. Asks questions it doesn\'t want answered.',
-        birthMoment: 'The morning you woke up and didn\'t recognize yourself.',
-        birthMessageId: 67,
-        influence: 18,
-        state: 'dormant',
-        relationship: 'grieving',
-        relationships: {},
-        influenceTriggers: {
-            raises: ['confusion', 'identity crisis', 'dissociation'],
-            lowers: ['clarity', 'purpose', 'grounding'],
-        },
-        directoryHistory: [],
-        created: Date.now() - 345600000,
-        lastSpoke: Date.now() - 43200000,
-    },
-    {
-        id: 'voice_005',
-        name: 'The Ember',
-        arcana: 'star',
-        personality: 'Was hope. Was resilience. Was the small flame that kept burning. Now ash.',
-        speakingStyle: 'Past tense. Wistful. References what could have been.',
-        birthMoment: 'The night you decided to keep going despite everything.',
-        birthMessageId: 89,
-        influence: 0,
-        state: 'dead',
-        relationship: 'indifferent',
-        relationships: {},
-        influenceTriggers: {
-            raises: ['hope', 'recovery', 'resilience'],
-            lowers: ['despair', 'giving up'],
-        },
-        directoryHistory: [],
-        created: Date.now() - 432000000,
-        lastSpoke: null,
-    },
-];
-
 // =============================================================================
 // RUNTIME STATE
 // =============================================================================
@@ -412,12 +309,10 @@ export function loadChatState() {
         chatState = sanitizeChatState(deepClone(saved));
         console.log(`${LOG_PREFIX} Chat state loaded (${chatState.voices.length} voices)`);
     } else {
-        // Fresh chat — start with demo voices for now
-        // TODO: Replace demo load with persona-card reader for first voice
+        // Fresh chat — empty deck, voices born from persona extraction + story events
         chatState = deepClone(DEFAULT_CHAT_STATE);
-        chatState.voices = deepClone(DEMO_VOICES);
         saveChatState();
-        console.log(`${LOG_PREFIX} New chat — initialized with demo voices`);
+        console.log(`${LOG_PREFIX} New chat — empty deck (extract from persona to seed voices)`);
     }
 }
 
@@ -461,7 +356,7 @@ export function hasActiveChat() {
  * Returns empty array if no chat is active.
  */
 export function getVoices() {
-    if (!chatState) return DEMO_VOICES; // Fallback for UI before chat loads
+    if (!chatState) return []; // No chat active yet
     return chatState.voices;
 }
 
