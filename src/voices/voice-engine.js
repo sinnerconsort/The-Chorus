@@ -30,6 +30,8 @@ import {
     setEscalation,
     updateThemeAccumulator,
     clearThemeAccumulation,
+    applyThoughtOperations,
+    serializeThoughts,
 } from '../state.js';
 import { classifyMessage } from './classifier.js';
 import {
@@ -44,6 +46,24 @@ import { tryAmbientNarration, narrateBirth, narrateDeath } from './narrator.js';
 
 // Voice commentary frequency counter (resets each time commentary fires)
 let voiceMessageCounter = 0;
+
+// Abort handling — cancel in-progress generation on chat switch or new message
+let currentAbortController = null;
+let currentSignal = null;
+let isProcessing = false;
+
+/**
+ * Abort any in-progress voice generation.
+ * Safe to call multiple times or when nothing is running.
+ */
+export function abortGeneration() {
+    if (currentAbortController) {
+        currentAbortController.abort();
+        currentAbortController = null;
+        currentSignal = null;
+    }
+    isProcessing = false;
+}
 
 // =============================================================================
 // PROFILE RESOLUTION (shared with classifier)
@@ -74,6 +94,11 @@ async function sendRequest(messages, maxTokens = 500) {
         throw new Error('No connection profile available');
     }
 
+    // Check abort before sending
+    if (currentSignal?.aborted) {
+        throw new DOMException('Aborted', 'AbortError');
+    }
+
     const response = await ctx.ConnectionManagerRequestService.sendRequest(
         profileId,
         messages,
@@ -85,6 +110,11 @@ async function sendRequest(messages, maxTokens = 500) {
         },
         {},
     );
+
+    // Check abort after receiving (cancelled during flight)
+    if (currentSignal?.aborted) {
+        throw new DOMException('Aborted', 'AbortError');
+    }
 
     return response?.content || response || '';
 }
@@ -135,6 +165,66 @@ function getToneDescription() {
     const key = extensionSettings.toneAnchor || 'raw';
     const tone = TONE_ANCHORS[key];
     return tone ? `${tone.name}: ${tone.description}` : 'Raw: Conversational, profane, blunt.';
+}
+
+/**
+ * Extract World Info / lorebook entries for voice context.
+ * Adapted from Pathweaver pattern — filters by order >= 250.
+ */
+function getWorldInfoExcerpt() {
+    if (!extensionSettings.includeWorldInfo) return '';
+
+    const maxEntries = extensionSettings.worldInfoMaxEntries || 5;
+
+    try {
+        const ctx = getContext();
+        const entries = [];
+        const MIN_ORDER = 250;
+
+        const processEntries = (entryData) => {
+            if (!entryData) return;
+            const list = Array.isArray(entryData) ? entryData : Object.values(entryData);
+            for (const entry of list) {
+                if (!entry) continue;
+                const content = entry.content || entry.text || '';
+                const isDisabled = entry.disable === true || entry.disabled === true;
+                const order = entry.order ?? entry.insertion_order ?? 0;
+                if (content && !isDisabled && order >= MIN_ORDER) {
+                    entries.push(content.substring(0, 500));
+                }
+            }
+        };
+
+        // 1. Character's embedded lorebook
+        if (ctx.characterId !== undefined && ctx.characters?.[ctx.characterId]) {
+            const char = ctx.characters[ctx.characterId];
+            if (char.data?.character_book?.entries) processEntries(char.data.character_book.entries);
+            if (entries.length === 0 && char.character_book?.entries) processEntries(char.character_book.entries);
+        }
+
+        // 2. Global world_info
+        if (entries.length === 0 && typeof window.world_info !== 'undefined' && window.world_info) {
+            processEntries(window.world_info);
+            if (window.world_info.entries) processEntries(window.world_info.entries);
+        }
+
+        // 3. world_info_data
+        if (entries.length === 0 && window.world_info_data?.entries) {
+            processEntries(window.world_info_data.entries);
+        }
+
+        // 4. chatMetadata worldInfo
+        if (entries.length === 0 && ctx.chatMetadata?.worldInfo) {
+            processEntries(ctx.chatMetadata.worldInfo);
+        }
+
+        if (entries.length === 0) return '';
+
+        return entries.slice(0, maxEntries).join('\n\n');
+    } catch (err) {
+        console.warn(`${LOG_PREFIX} World Info extraction failed:`, err);
+        return '';
+    }
 }
 
 // =============================================================================
@@ -208,7 +298,12 @@ Relationship with {{user}}: ${voice.relationship} | Influence: ${voice.influence
 ${v2vBlock}
 ${woundHint}
 Silent for: ${voice.silentStreak || 0} messages
-${voice.lastCommentary ? `You just said: "${voice.lastCommentary}" — do NOT repeat yourself or rephrase this. Build on it, contradict it, or say something new.` : ''}`;
+${voice.lastCommentary ? `You just said: "${voice.lastCommentary}" — do NOT repeat yourself or rephrase this. Build on it, contradict it, or say something new.` : ''}${(() => {
+    const thoughtBlock = serializeThoughts(voice.id);
+    return thoughtBlock
+        ? `\nCURRENT PREOCCUPATIONS (your evolving inner state):\n${thoughtBlock}\nThese color your reactions. Build on them, update them, let them drift.`
+        : '';
+})()}`;
     }).join('\n');
 
     return [
@@ -228,7 +323,10 @@ CHAT TONE: ${toneDesc}
 
 {{user}}'s PERSONA:
 ${personaExcerpt}
-
+${(() => {
+    const worldInfo = getWorldInfoExcerpt();
+    return worldInfo ? `\nWORLD LORE (known facts about this setting):\n${worldInfo}\n` : '';
+})()}
 VOICES PRESENT (generate a response for each):
 
 ${voiceBlocks}
@@ -249,7 +347,20 @@ REMEMBER: These are {{user}}'s INNER thoughts reacting to the scene. They talk A
 Do not narrate. Do not describe the scene. Do not write from {{char}}'s perspective. React to it AS {{user}}'s internal fragments.
 
 Format (one per voice, in order):
-[VOICE_NAME]: response or [SILENT]`,
+[VOICE_NAME]: response or [SILENT]
+
+After a voice's commentary, you MAY include ONE thought update if something shifted in how the voice thinks. Format:
+[VOICE_NAME]: commentary text ~~ key = thought sentence
+
+The key is 1-3 words, snake_case. The thought is one sentence from the voice's perspective. Only include this if something actually changed.
+To forget a thought: ~~ DELETE key
+
+Examples:
+[The Flinch]: She hesitated again. Twice now. ~~ current_suspicion = Two hesitations. She's building to something.
+[The Auditor]: ...fine. The numbers check out. For now. ~~ DELETE trust_deficit
+[Sweet Nothing]: Oh honey. Oh no. ~~ growing_worry = They're pulling away and they don't even see it.
+
+If nothing shifted, just write the commentary with no ~~ section.`,
         },
     ];
 }
@@ -309,10 +420,47 @@ function finalizeLine(results, speakers, voiceName, text) {
 
     const isSilent = !text || text === '[SILENT]' || text.toLowerCase().includes('[silent]');
 
+    // Parse thought operation if present (delimited by ~~)
+    let cleanText = text;
+    let thoughtOp = null;
+
+    if (!isSilent && text.includes('~~')) {
+        const parts = text.split('~~');
+        cleanText = parts[0].trim();
+        const opStr = (parts[1] || '').trim();
+
+        if (opStr) {
+            thoughtOp = parseThoughtOp(opStr);
+        }
+    }
+
     results[voice.id] = {
-        text: isSilent ? null : text,
+        text: isSilent ? null : cleanText,
         silent: isSilent,
+        thoughtOp,
     };
+}
+
+/**
+ * Parse a thought operation string.
+ * Formats:
+ *   key = thought sentence        → { op: 'set', key, value }
+ *   DELETE key                    → { op: 'delete', key }
+ */
+function parseThoughtOp(str) {
+    // DELETE pattern
+    const delMatch = str.match(/^DELETE\s+(\S+)/i);
+    if (delMatch) {
+        return { op: 'delete', key: delMatch[1] };
+    }
+
+    // SET pattern: key = value
+    const setMatch = str.match(/^(\S+)\s*=\s*(.+)$/);
+    if (setMatch) {
+        return { op: 'set', key: setMatch[1], value: setMatch[2].trim() };
+    }
+
+    return null;
 }
 
 /**
@@ -343,6 +491,14 @@ export async function generateSidebarCommentary(themes = [], impact = 'minor') {
                     lastCommentary: result.text,
                     silentStreak: 0,
                 });
+
+                // Apply thought operation if present
+                if (result.thoughtOp) {
+                    const log = applyThoughtOperations(voice.id, [result.thoughtOp]);
+                    if (log.length > 0) {
+                        console.log(`${LOG_PREFIX} ${voice.name} thought: ${log.join(', ')}`);
+                    }
+                }
 
                 commentary.push({
                     voiceId: voice.id,
@@ -414,6 +570,11 @@ function buildSpreadPrompt(voice, positionKey, positionDef, eventSummary, revers
         ).join('\n');
         memoryLines.push(`RECENT PRIVATE CONVERSATION:\n${dirSummary}`);
     }
+    // Current preoccupations from thought store
+    const thoughtBlock = serializeThoughts(voice.id);
+    if (thoughtBlock) {
+        memoryLines.push(`YOUR CURRENT PREOCCUPATIONS:\n${thoughtBlock}`);
+    }
     const memoryBlock = memoryLines.length > 0
         ? `\nYOUR MEMORY:\n${memoryLines.join('\n')}\n`
         : '';
@@ -453,7 +614,11 @@ RECENT SCENE:
 ${recentMessages}
 
 {{user}}'s PERSONA:
-${personaExcerpt}`,
+${personaExcerpt}
+${(() => {
+    const worldInfo = getWorldInfoExcerpt();
+    return worldInfo ? `\nWORLD LORE:\n${worldInfo}\n` : '';
+})()}`,
         },
         {
             role: 'user',
@@ -712,6 +877,14 @@ function recordSpreadAdvice(cardReading) {
  * @returns {Object} { classification, commentary[], cardReading, lifecycleEvents[], newVoice }
  */
 export async function processMessage(messageText) {
+    // Abort any previous in-progress generation
+    abortGeneration();
+
+    // Create new controller for this run
+    currentAbortController = new AbortController();
+    currentSignal = currentAbortController.signal;
+    isProcessing = true;
+
     const result = {
         classification: { impact: 'none', themes: [], summary: '', resolutionProgress: [] },
         commentary: [],
@@ -719,102 +892,117 @@ export async function processMessage(messageText) {
         lifecycleEvents: [],
         newVoice: null,
         narrator: null,  // Narrator text (if it speaks)
+        aborted: false,
     };
 
-    // ─── Step 1: Classify (includes resolution assessment) ───
-    result.classification = await classifyMessage(messageText);
-    const { impact, themes, summary, resolutionProgress } = result.classification;
+    try {
+        // ─── Step 1: Classify (includes resolution assessment) ───
+        result.classification = await classifyMessage(messageText);
+        const { impact, themes, summary, resolutionProgress } = result.classification;
 
-    // ─── Step 2: Update influence from themes ───
-    const deltas = calculateInfluenceDeltas(themes, extensionSettings.influenceGainRate || 3);
-    for (const { voiceId, delta } of deltas) {
-        adjustInfluence(voiceId, delta);
-    }
+        // ─── Step 2: Update influence from themes ───
+        const deltas = calculateInfluenceDeltas(themes, extensionSettings.influenceGainRate || 3);
+        for (const { voiceId, delta } of deltas) {
+            adjustInfluence(voiceId, delta);
+        }
 
-    // ─── Step 2b: Passive relationship drift from chat context ───
-    applyPassiveRelationshipDrift(themes);
+        // ─── Step 2b: Passive relationship drift from chat context ───
+        applyPassiveRelationshipDrift(themes);
 
-    // ─── Step 2c: Spread advice drift (did user follow/ignore last reading?) ───
-    applyAdviceDrift(themes);
+        // ─── Step 2c: Spread advice drift (did user follow/ignore last reading?) ───
+        applyAdviceDrift(themes);
 
-    // ─── Step 3: Update escalation from impact ───
-    updateEscalation(impact);
+        // ─── Step 3: Update escalation from impact ───
+        updateEscalation(impact);
 
-    // ─── Step 4: Process lifecycle (resolution, fading, transformation) ───
-    result.lifecycleEvents = processLifecycle(result.classification, resolutionProgress);
+        // ─── Step 4: Process lifecycle (resolution, fading, transformation) ───
+        result.lifecycleEvents = processLifecycle(result.classification, resolutionProgress);
 
-    // Handle any transformations that completed
-    for (const event of result.lifecycleEvents) {
-        if (event.type === 'transforming' && event.transformData) {
-            const newVoice = await completeTransformation(event.transformData);
-            if (newVoice) {
-                event.newVoice = newVoice;
-                result.newVoice = newVoice;
+        // Handle any transformations that completed
+        for (const event of result.lifecycleEvents) {
+            if (event.type === 'transforming' && event.transformData) {
+                const newVoice = await completeTransformation(event.transformData);
+                if (newVoice) {
+                    event.newVoice = newVoice;
+                    result.newVoice = newVoice;
+                }
             }
         }
-    }
 
-    // Narrate lifecycle events (births from transform, deaths)
-    for (const event of result.lifecycleEvents) {
-        if ((event.type === 'resolved' || event.type === 'fade_death') && !result.narrator) {
-            result.narrator = await narrateDeath(event);
+        // Narrate lifecycle events (births from transform, deaths)
+        for (const event of result.lifecycleEvents) {
+            if ((event.type === 'resolved' || event.type === 'fade_death') && !result.narrator) {
+                result.narrator = await narrateDeath(event);
+            }
+            if (event.type === 'transforming' && event.newVoice && !result.narrator) {
+                result.narrator = await narrateBirth(event.newVoice);
+            }
         }
-        if (event.type === 'transforming' && event.newVoice && !result.narrator) {
-            result.narrator = await narrateBirth(event.newVoice);
+
+        // ─── Step 5: Birth check (event-driven) ───
+        if (!result.newVoice) {
+            result.newVoice = await checkBirth(impact, themes, summary, messageText);
         }
-    }
 
-    // ─── Step 5: Birth check (event-driven) ───
-    if (!result.newVoice) {
-        result.newVoice = await checkBirth(impact, themes, summary, messageText);
-    }
-
-    // ─── Step 5b: Accumulation tracking + birth ───
-    if (!result.newVoice && themes.length > 0) {
-        result.newVoice = await checkAccumulationBirth(impact, themes);
-    }
-
-    // ─── Step 5c: Consume check (predator devours prey) ───
-    if (!result.newVoice) {
-        const consumeEvent = checkConsume();
-        if (consumeEvent) {
-            result.lifecycleEvents.push(consumeEvent);
+        // ─── Step 5b: Accumulation tracking + birth ───
+        if (!result.newVoice && themes.length > 0) {
+            result.newVoice = await checkAccumulationBirth(impact, themes);
         }
-    }
 
-    // ─── Step 5d: Merge check (overlapping voices consolidate) ───
-    if (!result.newVoice) {
-        const mergeResult = await checkMerge();
-        if (mergeResult) {
-            result.newVoice = mergeResult.newVoice;
-            result.lifecycleEvents.push(...mergeResult.events);
+        // ─── Step 5c: Consume check (predator devours prey) ───
+        if (!result.newVoice) {
+            const consumeEvent = checkConsume();
+            if (consumeEvent) {
+                result.lifecycleEvents.push(consumeEvent);
+            }
         }
-    }
 
-    // Narrate new birth
-    if (result.newVoice && !result.narrator) {
-        result.narrator = await narrateBirth(result.newVoice);
-    }
+        // ─── Step 5d: Merge check (overlapping voices consolidate) ───
+        if (!result.newVoice) {
+            const mergeResult = await checkMerge();
+            if (mergeResult) {
+                result.newVoice = mergeResult.newVoice;
+                result.lifecycleEvents.push(...mergeResult.events);
+            }
+        }
 
-    // ─── Step 6: Sidebar commentary (gated by voice frequency setting) ───
-    voiceMessageCounter++;
-    const voiceFreq = extensionSettings.voiceFrequency || 1;
-    if (voiceMessageCounter >= voiceFreq) {
-        result.commentary = await generateSidebarCommentary(themes, impact);
-        voiceMessageCounter = 0;
-    }
+        // Narrate new birth
+        if (result.newVoice && !result.narrator) {
+            result.narrator = await narrateBirth(result.newVoice);
+        }
 
-    // ─── Step 7: Ambient narrator (if nothing triggered above) ───
-    if (!result.narrator) {
-        result.narrator = await tryAmbientNarration(messageText, result.commentary);
-    }
+        // ─── Step 6: Sidebar commentary (gated by voice frequency setting) ───
+        voiceMessageCounter++;
+        const voiceFreq = extensionSettings.voiceFrequency || 1;
+        if (voiceMessageCounter >= voiceFreq) {
+            result.commentary = await generateSidebarCommentary(themes, impact);
+            voiceMessageCounter = 0;
+        }
 
-    // ─── Step 8: Card pull / spread (conditional) ───
-    result.cardReading = await handleCardDraw(impact, themes, summary);
+        // ─── Step 7: Ambient narrator (if nothing triggered above) ───
+        if (!result.narrator) {
+            result.narrator = await tryAmbientNarration(messageText, result.commentary);
+        }
 
-    // ─── Step 8b: Record spread advice for drift tracking on next message ───
-    if (result.cardReading) {
-        recordSpreadAdvice(result.cardReading);
+        // ─── Step 8: Card pull / spread (conditional) ───
+        result.cardReading = await handleCardDraw(impact, themes, summary);
+
+        // ─── Step 8b: Record spread advice for drift tracking on next message ───
+        if (result.cardReading) {
+            recordSpreadAdvice(result.cardReading);
+        }
+
+    } catch (e) {
+        if (e.name === 'AbortError' || currentSignal?.aborted) {
+            console.log(`${LOG_PREFIX} Generation aborted`);
+            result.aborted = true;
+            return result;
+        }
+        throw e; // Re-throw real errors
+    } finally {
+        isProcessing = false;
+        currentAbortController = null;
+        currentSignal = null;
     }
 
     return result;
