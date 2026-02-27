@@ -224,9 +224,8 @@ function updateOutreachUI() {
         const voice = pending[0];
         const arcana = getArcana(voice.arcana);
 
-        // Populate back face
+        // Populate back face (glyph only — name too small for FAB)
         $('.chorus-fab__back-glyph').text(arcana.glyph || '🂠');
-        $('.chorus-fab__back-name').text(voice.name.toUpperCase());
 
         // Set color CSS vars on the FAB
         $fab.css({
