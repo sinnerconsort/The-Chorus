@@ -72,7 +72,7 @@ async function sendRequest(messages, maxTokens = 600) {
         profileId,
         messages,
         maxTokens,
-        { extractData: true, includePreset: true, includeInstruct: false },
+        { extractData: true, includePreset: false, includeInstruct: false },
         {},
     );
 
