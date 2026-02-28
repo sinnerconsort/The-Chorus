@@ -164,7 +164,7 @@ export async function classifyMessage(messageText) {
             200, // Short response — just JSON
             {
                 extractData: true,
-                includePreset: true,
+                includePreset: false,
                 includeInstruct: false,
             },
             {},
