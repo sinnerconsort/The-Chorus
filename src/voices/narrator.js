@@ -84,7 +84,7 @@ async function sendRequest(messages, maxTokens = 200) {
         profileId,
         messages,
         maxTokens,
-        { extractData: true, includePreset: true, includeInstruct: false },
+        { extractData: true, includePreset: false, includeInstruct: false },
         {},
     );
 
@@ -746,11 +746,60 @@ function cleanResponse(text) {
 
     if (cleaned === '[SILENT]' || cleaned.toLowerCase().includes('[silent]')) return null;
 
+    // Strip wrapping quotes
     if ((cleaned.startsWith('"') && cleaned.endsWith('"')) ||
         (cleaned.startsWith("'") && cleaned.endsWith("'"))) {
         cleaned = cleaned.slice(1, -1).trim();
     }
 
+    // Strip [LABEL]: prefix
     cleaned = cleaned.replace(/^\[.*?\]:\s*/, '');
-    return cleaned.length > 0 ? cleaned : null;
+
+    // Detect prompt regurgitation / chain-of-thought reasoning
+    // These patterns indicate the model is analyzing the prompt, not responding
+    const promptLeakPatterns = [
+        /^\d+\.\s*\*\*/,              // "1. **Analyze..."
+        /\*\*Role:\*\*/i,              // "**Role:**"
+        /\*\*Characteristics:\*\*/i,   // "**Characteristics:**"
+        /\*\*Agenda:\*\*/i,            // "**Agenda:**"
+        /\*\*Analyze.*Request/i,       // "**Analyze the Request**"
+        /\*\*Response:\*\*/i,          // "**Response:**"
+        /^As the (Stage Manager|Therapist|Framing|Conscience|Director|Warden|Conspirator|Fool)/i,
+    ];
+
+    for (const pattern of promptLeakPatterns) {
+        if (pattern.test(cleaned)) {
+            // Try to salvage: look for the last paragraph that isn't analysis
+            const paragraphs = cleaned.split(/\n\n+/).map(p => p.trim()).filter(Boolean);
+            const lastPara = paragraphs[paragraphs.length - 1];
+            if (lastPara && !promptLeakPatterns.some(p => p.test(lastPara))) {
+                cleaned = lastPara;
+            } else {
+                // Entire response is analysis — nothing to salvage
+                console.warn(`${LOG_PREFIX} Narrator response was prompt regurgitation, discarding`);
+                return null;
+            }
+        }
+    }
+
+    // Strip residual markdown bold/italic
+    cleaned = cleaned.replace(/\*\*(.+?)\*\*/g, '$1');
+    cleaned = cleaned.replace(/\*(.+?)\*/g, '$1');
+
+    // Strip numbered list prefixes
+    cleaned = cleaned.replace(/^\d+\.\s+/gm, '');
+
+    // Strip bullet points
+    cleaned = cleaned.replace(/^[*\-•]\s+/gm, '');
+
+    // Collapse excessive whitespace
+    cleaned = cleaned.replace(/\n{3,}/g, '\n\n').trim();
+
+    // Catch truncated fragments — unterminated short text is likely a prompt fragment
+    if (cleaned.length < 30 && !/[.!?…"']$/.test(cleaned)) {
+        console.warn(`${LOG_PREFIX} Narrator response looks like a truncated fragment, discarding: "${cleaned}"`);
+        return null;
+    }
+
+    return cleaned.length > 3 ? cleaned : null;
 }

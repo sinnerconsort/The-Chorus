@@ -105,7 +105,7 @@ async function sendRequest(messages, maxTokens = 500) {
         maxTokens,
         {
             extractData: true,
-            includePreset: true,
+            includePreset: false,
             includeInstruct: false,
         },
         {},
@@ -639,6 +639,58 @@ This is YOUR reading, YOUR position, YOUR perspective alone.`,
 }
 
 /**
+ * Clean generated text — strips prompt regurgitation, chain-of-thought,
+ * markdown formatting, and meta-analysis that some models output.
+ */
+function cleanGeneratedText(text) {
+    if (!text) return '';
+    let cleaned = text.trim();
+
+    // Strip wrapping quotes
+    if ((cleaned.startsWith('"') && cleaned.endsWith('"')) ||
+        (cleaned.startsWith("'") && cleaned.endsWith("'"))) {
+        cleaned = cleaned.slice(1, -1).trim();
+    }
+
+    // Strip [LABEL]: prefix
+    cleaned = cleaned.replace(/^\[.*?\]:\s*/, '');
+
+    // Detect prompt regurgitation patterns
+    const promptLeakPatterns = [
+        /^\d+\.\s*\*\*/,              // "1. **Analyze..."
+        /\*\*Role:\*\*/i,
+        /\*\*Characteristics:\*\*/i,
+        /\*\*Position:\*\*/i,
+        /\*\*Response:\*\*/i,
+        /\*\*Analyze.*Request/i,
+        /\*\*Reading:\*\*/i,
+    ];
+
+    for (const pattern of promptLeakPatterns) {
+        if (pattern.test(cleaned)) {
+            // Try to salvage the last clean paragraph
+            const paragraphs = cleaned.split(/\n\n+/).map(p => p.trim()).filter(Boolean);
+            const lastPara = paragraphs[paragraphs.length - 1];
+            if (lastPara && !promptLeakPatterns.some(p => p.test(lastPara))) {
+                cleaned = lastPara;
+            } else {
+                console.warn(`${LOG_PREFIX} Generated response was prompt regurgitation, discarding`);
+                return '';
+            }
+        }
+    }
+
+    // Strip residual markdown
+    cleaned = cleaned.replace(/\*\*(.+?)\*\*/g, '$1');
+    cleaned = cleaned.replace(/\*(.+?)\*/g, '$1');
+    cleaned = cleaned.replace(/^\d+\.\s+/gm, '');
+    cleaned = cleaned.replace(/^[*\-•]\s+/gm, '');
+    cleaned = cleaned.replace(/\n{3,}/g, '\n\n').trim();
+
+    return cleaned;
+}
+
+/**
  * Generate a single card reading.
  * Returns { voiceId, name, arcana, position, reversed, text }
  */
@@ -652,6 +704,12 @@ export async function generateSingleCard(themes = [], eventSummary = '') {
 
     try {
         const text = await sendRequest(messages, 300);
+        const cleaned = cleanGeneratedText(text);
+
+        if (!cleaned) {
+            console.warn(`${LOG_PREFIX} Single card response was empty after cleaning`);
+            return null;
+        }
 
         return {
             voiceId: voice.id,
@@ -662,7 +720,7 @@ export async function generateSingleCard(themes = [], eventSummary = '') {
             position: 'present',
             positionName: position.name,
             reversed,
-            text: text.trim(),
+            text: cleaned,
         };
     } catch (e) {
         console.error(`${LOG_PREFIX} Single card generation failed:`, e);
@@ -692,6 +750,12 @@ export async function generateSpread(spreadType, themes = [], eventSummary = '')
 
         try {
             const text = await sendRequest(messages, 300);
+            const cleaned = cleanGeneratedText(text);
+
+            if (!cleaned) {
+                console.warn(`${LOG_PREFIX} Spread position ${posKey} response empty after cleaning`);
+                continue;
+            }
 
             cards.push({
                 voiceId: voice.id,
@@ -702,7 +766,7 @@ export async function generateSpread(spreadType, themes = [], eventSummary = '')
                 position: posKey,
                 positionName: positionDef.name,
                 reversed,
-                text: text.trim(),
+                text: cleaned,
             });
         } catch (e) {
             console.error(`${LOG_PREFIX} Spread position ${posKey} failed:`, e);
